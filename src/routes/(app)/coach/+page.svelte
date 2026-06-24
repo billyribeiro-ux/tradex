@@ -1,10 +1,19 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Sparkle, PaperPlaneTilt } from 'phosphor-svelte';
+	import { Sparkle, PaperPlaneTilt, Database } from 'phosphor-svelte';
 
 	let { data, form } = $props();
 	let question = $state('');
 	let loading = $state(false);
+
+	type QueryForm = {
+		question: string;
+		sql: string;
+		columns: string[];
+		rows: Record<string, unknown>[];
+		rowCount: number;
+	};
+	const qr = $derived(form && 'sql' in form && form.sql ? (form as unknown as QueryForm) : null);
 
 	const prompts = [
 		'What is my biggest leak right now?',
@@ -59,6 +68,9 @@
 					<PaperPlaneTilt size={16} />
 					{loading ? 'Thinking…' : 'Ask the coach'}
 				</button>
+				<button type="submit" formaction="?/query" class="btn btn-ghost" disabled={loading}>
+					<Database size={16} /> Run as query
+				</button>
 				{#each prompts as p (p)}
 					<button type="button" class="btn btn-ghost text-xs" onclick={() => (question = p)}
 						>{p}</button
@@ -76,10 +88,40 @@
 				<div class="text-sm whitespace-pre-wrap">{form.answer}</div>
 			</div>
 		{/if}
+		{#if qr}
+			<div class="mt-5 border-t pt-4" style="border-color:var(--color-border)">
+				<p class="mb-2 text-sm font-medium" style="color:var(--color-muted)">{qr.question}</p>
+				<pre
+					class="overflow-x-auto rounded-lg p-3 text-xs"
+					style="background:var(--color-surface-2)"><code>{qr.sql}</code></pre>
+				<p class="mt-2 mb-2 text-xs" style="color:var(--color-muted)">{qr.rowCount} rows</p>
+				{#if qr.rows.length > 0}
+					<div class="overflow-x-auto rounded-lg" style="background:var(--color-surface-2)">
+						<table class="w-full text-xs">
+							<thead class="text-left" style="color:var(--color-muted)">
+								<tr>
+									{#each qr.columns as c (c)}<th class="p-2 font-medium">{c}</th>{/each}
+								</tr>
+							</thead>
+							<tbody>
+								{#each qr.rows as row, i (i)}
+									<tr class="border-t" style="border-color:var(--color-border)">
+										{#each qr.columns as c (c)}
+											<td class="p-2 tabular-nums">{String(row[c] ?? '—')}</td>
+										{/each}
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
 	<p class="mt-3 text-xs" style="color:var(--color-muted)">
-		Insights reflect the current account's closed trades. Needs ~30+ trades for reliable patterns.
-		NL→SQL querying with shown SQL is coming next.
+		Insights reflect the current account's closed trades (needs ~30+ for reliable patterns).
+		<strong>Run as query</strong> turns plain English into SQL — shown to you — run safely against an
+		isolated copy of only your trades.
 	</p>
 {/if}

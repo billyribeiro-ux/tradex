@@ -36,14 +36,17 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - **AI Coach** — bring-your-own Anthropic key, **AES-256-GCM encrypted at rest**; `/coach` sends the
   account's computed stats + recent closed trades to Claude (default `claude-sonnet-4-6`, with
   Opus 4.8 / Haiku 4.5 selectable) for evidence-based, small-sample-flagged insights. Settings page
-  to manage the key. (Grounded Q&A shipped; NL→SQL query execution with shown SQL is next.)
+  to manage the key.
+- **AI Coach — NL→SQL** ("Run as query"): plain-English questions become a read-only `SELECT` over a
+  documented `trades` view, **the generated SQL is shown**, and it runs in a throwaway in-process
+  PGlite sandbox seeded with ONLY the current account's trades — cross-tenant leakage is structurally
+  impossible, with extra validation blocking writes/DDL/multi-statement/comments. (6 tests.)
 - **Tests** — 53 passing (money, grouping, metrics, CSV mapping, and a full server integration test
   on in-memory Postgres: CSV → group → metrics → dashboard, idempotent re-import, reversal regroup).
   CI via GitHub Actions.
 
 ### Deferred (next phases)
 
-- AI Coach **NL→SQL** querying with the generated SQL shown (read-only, account-scoped guardrails).
 - JWT/JWKS + bearer auth (added in Phase 3 for the Rust/Axum API and Tauri desktop).
 - Multi-leg options analytics, prop-firm rule monitor, Monte Carlo edge validation.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).
