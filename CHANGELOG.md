@@ -50,9 +50,15 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   static/trailing max drawdown, min trading days, consistency) with live pass/breach status and an
   editable per-account config. (10 tests.)
 - **Journal** (`/journal`) — date-based free-form review notes with a running feed and delete.
-- **Tests** — 69 passing (money, grouping, metrics, CSV mapping, NL→SQL validator + sandbox, and a
-  full server integration test on in-memory Postgres: CSV → group → metrics → dashboard, idempotent
-  re-import, reversal regroup). CI via GitHub Actions.
+- **Categorization** — free-text Setup, Emotion, and comma-separated Tags on the trade detail,
+  created on demand (race-safe find-or-create), so trades can be sliced by setup/tag/emotion.
+- **PWA** — installable (manifest + brand icon), offline app-shell service worker (precaches the
+  built shell; never caches auth-sensitive HTML/API).
+- **Desktop (Tauri 2)** — `src-tauri/` shell (resolves to `tauri` 2.11.3, Cargo.lock committed,
+  icon set generated); `pnpm tauri:dev` wraps the live app, `pnpm tauri:build` packages the
+  `ADAPTER=static` SPA. (Offline data layer lands with Phase 3/4.)
+- **Tests** — 69 unit/integration passing + a Playwright E2E happy-path (signup → trade → log),
+  wired into CI alongside lint, typecheck, and build. CI via GitHub Actions.
 
 ### Deferred (next phases)
 
@@ -60,5 +66,5 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - Multi-leg options analytics; alt-exit backtest simulation.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).
 - Virtualized trade table (currently server-paginated), interactive CSV column-mapper UI.
-- Rust + Axum backend (Phase 3) and Tauri 2 desktop with an embedded local DB synced to Neon (Phase 4).
-- Tags / setups management UIs; PWA; browser E2E (Playwright configured).
+- Rust + Axum backend (Phase 3); then the Tauri shell's offline data layer via embedded DB + Neon
+  sync (Phase 4) — the desktop shell itself already exists in `src-tauri/`.

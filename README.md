@@ -33,7 +33,21 @@ pnpm db:migrate        # applies committed migrations (PGlite locally, Neon in p
 pnpm dev               # http://localhost:5173
 ```
 
-Scripts: `pnpm check` (svelte-check), `pnpm test:unit` (Vitest), `pnpm build` (adapter-node).
-Build the desktop SPA target with `ADAPTER=static pnpm build`.
+Scripts: `pnpm check` (svelte-check), `pnpm test:unit` (Vitest), `pnpm test:e2e` (Playwright),
+`pnpm build` (adapter-node). Build the desktop SPA target with `ADAPTER=static pnpm build`.
+
+## Desktop (Tauri 2)
+
+A Tauri v2 shell lives in `src-tauri/` (resolves to `tauri` 2.11.3). Requires a Rust toolchain
+and the platform webview libs (Linux: `webkit2gtk-4.1`).
+
+```sh
+pnpm tauri:dev      # native window wrapping the dev server (full features)
+pnpm tauri:build    # ADAPTER=static SPA build, packaged as a desktop app
+```
+
+`tauri:dev` works today against the live SvelteKit server. The packaged offline build ships the
+static SPA shell; routes that use server `load`/actions need a reachable backend — wired to the
+hosted server now, and to the future Rust/Axum API (or Tauri IPC) for a fully offline desktop.
 
 See `CHANGELOG.md` for what's shipped and what's deferred.
