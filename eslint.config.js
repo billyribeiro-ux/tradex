@@ -20,7 +20,7 @@ export default defineConfig(
 		rules: {
 			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
 			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
-			"no-undef": 'off'
+			'no-undef': 'off'
 		}
 	},
 	{
@@ -34,8 +34,13 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// Typed-route resolve() links are a nice-to-have we'll adopt later; the
+			// rule is too noisy for plain string hrefs in v1.
+			'svelte/no-navigation-without-resolve': 'off',
+			// Our Date/Map uses are local computation inside $derived (recreated
+			// wholesale on dependency change), not long-lived reactive state.
+			'svelte/prefer-svelte-reactivity': 'off'
+		}
 	}
 );

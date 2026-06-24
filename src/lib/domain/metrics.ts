@@ -115,11 +115,7 @@ export function computePerformance(trades: readonly ClosedTradeLike[]): Performa
 
 	const winRate = decided > 0 ? divScaled(toScaled(winCount), toScaled(decided)) : 0;
 	const profitFactor =
-		grossLoss > 0
-			? divScaled(grossProfit, grossLoss)
-			: grossProfit > 0
-				? INFINITE_RATIO
-				: 0;
+		grossLoss > 0 ? divScaled(grossProfit, grossLoss) : grossProfit > 0 ? INFINITE_RATIO : 0;
 	const expectancy = divScaled(netPnl, toScaled(tradeCount));
 	const avgWin = winCount > 0 ? divScaled(grossProfit, toScaled(winCount)) : 0;
 	const avgLoss = lossCount > 0 ? -divScaled(grossLoss, toScaled(lossCount)) : 0;

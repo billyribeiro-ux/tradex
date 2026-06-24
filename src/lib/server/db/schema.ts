@@ -1,4 +1,11 @@
-import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
+import {
+	sqliteTable,
+	text,
+	integer,
+	index,
+	uniqueIndex,
+	primaryKey
+} from 'drizzle-orm/sqlite-core';
 import { user } from './auth.schema';
 import { SCALE } from '$lib/money';
 import type {
@@ -106,7 +113,9 @@ export const optionContract = sqliteTable(
 		type: text('type').$type<OptionType>().notNull(),
 		strike: integer('strike').notNull(),
 		expiry: integer('expiry').notNull(),
-		multiplier: integer('multiplier').notNull().default(100 * SCALE)
+		multiplier: integer('multiplier')
+			.notNull()
+			.default(100 * SCALE)
 	},
 	(t) => [index('option_contract_underlying_idx').on(t.underlyingInstrumentId)]
 );

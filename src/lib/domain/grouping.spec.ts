@@ -16,10 +16,7 @@ function ex(
 
 describe('groupExecutions — simple round trips', () => {
 	it('groups a basic long round trip', () => {
-		const trades = groupExecutions([
-			ex('1', 'buy', 100, 10, 1000),
-			ex('2', 'sell', 100, 12, 2000)
-		]);
+		const trades = groupExecutions([ex('1', 'buy', 100, 10, 1000), ex('2', 'sell', 100, 12, 2000)]);
 		expect(trades).toHaveLength(1);
 		const t = trades[0]!;
 		expect(t.direction).toBe('long');
@@ -113,10 +110,7 @@ describe('groupExecutions — reversals', () => {
 
 describe('groupExecutions — open positions & edge cases', () => {
 	it('leaves a partially-closed position open', () => {
-		const trades = groupExecutions([
-			ex('1', 'buy', 100, 10, 1000),
-			ex('2', 'sell', 30, 12, 2000)
-		]);
+		const trades = groupExecutions([ex('1', 'buy', 100, 10, 1000), ex('2', 'sell', 30, 12, 2000)]);
 		expect(trades).toHaveLength(1);
 		expect(trades[0]!.status).toBe('open');
 		expect(fromScaled(trades[0]!.qtyRemaining)).toBe(70);
@@ -124,10 +118,7 @@ describe('groupExecutions — open positions & edge cases', () => {
 	});
 
 	it('sorts unordered executions by time before grouping', () => {
-		const trades = groupExecutions([
-			ex('2', 'sell', 100, 12, 2000),
-			ex('1', 'buy', 100, 10, 1000)
-		]);
+		const trades = groupExecutions([ex('2', 'sell', 100, 12, 2000), ex('1', 'buy', 100, 10, 1000)]);
 		expect(trades).toHaveLength(1);
 		expect(trades[0]!.direction).toBe('long');
 		expect(fromScaled(trades[0]!.grossPnl)).toBe(200);
@@ -135,9 +126,12 @@ describe('groupExecutions — open positions & edge cases', () => {
 
 	it('applies a futures multiplier to P&L', () => {
 		// ES: 2 contracts, +4.25 points, $50/point => 2 * 4.25 * 50 = 425
-		const trades = groupExecutions([ex('1', 'buy', 2, 5000, 1000), ex('2', 'sell', 2, 5004.25, 2000)], {
-			multiplier: toScaled(50)
-		});
+		const trades = groupExecutions(
+			[ex('1', 'buy', 2, 5000, 1000), ex('2', 'sell', 2, 5004.25, 2000)],
+			{
+				multiplier: toScaled(50)
+			}
+		);
 		expect(fromScaled(trades[0]!.grossPnl)).toBeCloseTo(425, 6);
 	});
 

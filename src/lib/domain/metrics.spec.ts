@@ -9,7 +9,12 @@ import {
 } from './metrics';
 import { toScaled, fromScaled } from '$lib/money';
 
-function t(netPnl: number, closedAt: number, fees = 0, holdMs: number | null = 60000): ClosedTradeLike {
+function t(
+	netPnl: number,
+	closedAt: number,
+	fees = 0,
+	holdMs: number | null = 60000
+): ClosedTradeLike {
 	return { netPnl: toScaled(netPnl), fees: toScaled(fees), holdMs, closedAt };
 }
 
@@ -22,12 +27,7 @@ describe('computePerformance', () => {
 	});
 
 	it('computes core metrics for a mixed set', () => {
-		const m = computePerformance([
-			t(100, 1000),
-			t(-50, 2000),
-			t(200, 3000),
-			t(-25, 4000)
-		]);
+		const m = computePerformance([t(100, 1000), t(-50, 2000), t(200, 3000), t(-25, 4000)]);
 		expect(m.tradeCount).toBe(4);
 		expect(m.winCount).toBe(2);
 		expect(m.lossCount).toBe(2);
@@ -49,13 +49,7 @@ describe('computePerformance', () => {
 	});
 
 	it('tracks win and loss streaks', () => {
-		const m = computePerformance([
-			t(10, 1000),
-			t(10, 2000),
-			t(10, 3000),
-			t(-5, 4000),
-			t(-5, 5000)
-		]);
+		const m = computePerformance([t(10, 1000), t(10, 2000), t(10, 3000), t(-5, 4000), t(-5, 5000)]);
 		expect(m.maxWinStreak).toBe(3);
 		expect(m.maxLossStreak).toBe(2);
 	});
@@ -68,7 +62,10 @@ describe('computePerformance', () => {
 
 	it('measures consistency across days (one big day => low)', () => {
 		// all profit on a single day => consistency ~0
-		const oneDay = computePerformance([t(100, Date.UTC(2026, 0, 1, 10)), t(100, Date.UTC(2026, 0, 1, 14))]);
+		const oneDay = computePerformance([
+			t(100, Date.UTC(2026, 0, 1, 10)),
+			t(100, Date.UTC(2026, 0, 1, 14))
+		]);
 		expect(fromScaled(oneDay.consistency)).toBe(0);
 		// spread evenly across two days => consistency 0.5
 		const twoDays = computePerformance([

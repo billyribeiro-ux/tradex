@@ -1,42 +1,39 @@
-# sv
+# TradeX
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A state-of-the-art trade journaling app — built to implement every table-stakes feature of the best
+journals (TradeZella, Tradervue, Edgewonk, TraderSync, TradesViz, …) and beat them where they all
+fail: a **correct, forgiving import + grouping engine**, **transparent metrics**, **full data
+export (no lock-in)**, and a roadmap to a **local-first offline desktop app**.
 
-## Creating a project
+## Stack (pinned, latest as of June 2026)
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Frontend:** SvelteKit 2.67 · Svelte 5 (runes) · Vite 8 · TypeScript 6 (strict) · Tailwind CSS 4
+- **Icons / charts:** phosphor-svelte · lightweight-charts (equity curve) · hand-rolled SVG calendar
+- **Data:** Drizzle ORM + libSQL/SQLite (local file → Turso) · Zod validation
+- **Auth:** Better Auth (sessions; email/password + GitHub/Google OAuth)
+- **Tooling:** pnpm 11 · Node 24 LTS · Vitest 4 · Playwright 1.61
+- **Planned:** Rust + Axum backend (Phase 3) · Tauri 2 desktop, offline + Turso sync (Phase 4)
 
-```sh
-# create a new project
-npx sv create my-app
-```
+## Architecture seam
 
-To recreate this project with the same configuration:
+All DB access and business logic live in `src/lib/server`. The engines — grouping, metrics, score,
+CSV mapping — are **pure and framework-agnostic** (`src/lib/domain`), and services take the Drizzle
+client by dependency injection. Money is stored as scaled integers (1e8) and time as UTC epoch ms, so
+the future Rust backend (i64) agrees byte-for-byte. Drizzle migrations are committed so Rust (sqlx)
+can open the identical database. This keeps a clean swap point for the Rust/Axum API and Tauri.
 
-```sh
-# recreate this project
-pnpm dlx sv@0.16.1 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" playwright tailwindcss="plugins:none" drizzle="database:sqlite+sqlite:libsql" better-auth="demo:password,github" --no-download-check --install pnpm .
-```
+## Develop
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
+Requires Node 24 (`.node-version`) and pnpm 11 (Corepack).
 
 ```sh
-npm run build
+corepack enable
+pnpm install
+pnpm db:migrate        # creates local.db from committed migrations
+pnpm dev               # http://localhost:5173
 ```
 
-You can preview the production build with `npm run preview`.
+Scripts: `pnpm check` (svelte-check), `pnpm test:unit` (Vitest), `pnpm build` (adapter-node).
+Build the desktop SPA target with `ADAPTER=static pnpm build`.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+See `CHANGELOG.md` for what's shipped and what's deferred.

@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: ['main', 'claude/**']
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (svelte-check, strict)
+        run: pnpm run check
+
+      - name: Unit + integration tests
+        run: pnpm exec vitest run --project server
+
+      - name: Build (adapter-node)
+        run: pnpm build
