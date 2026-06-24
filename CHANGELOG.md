@@ -49,6 +49,7 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   drawdown distribution) and a **prop-firm rule monitor** (profit target, daily-loss limit,
   static/trailing max drawdown, min trading days, consistency) with live pass/breach status and an
   editable per-account config. (10 tests.)
+- **Journal** (`/journal`) — date-based free-form review notes with a running feed and delete.
 - **Tests** — 69 passing (money, grouping, metrics, CSV mapping, NL→SQL validator + sandbox, and a
   full server integration test on in-memory Postgres: CSV → group → metrics → dashboard, idempotent
   re-import, reversal regroup). CI via GitHub Actions.
@@ -60,4 +61,4 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).
 - Virtualized trade table (currently server-paginated), interactive CSV column-mapper UI.
 - Rust + Axum backend (Phase 3) and Tauri 2 desktop with an embedded local DB synced to Neon (Phase 4).
-- Tags / setups / journal management UIs; PWA; browser E2E (Playwright configured).
+- Tags / setups management UIs; PWA; browser E2E (Playwright configured).
