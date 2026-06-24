@@ -7,6 +7,7 @@ import { executionDedupeKey } from '$lib/domain/dedupe';
 import type { ExecInput } from '$lib/domain/types';
 import type { AssetClass, Direction, Side } from '$lib/domain/enums';
 import { findOrCreateInstrument } from './instruments';
+import { getTradeCategorization } from './categorization';
 
 export interface ExecutionInput {
 	side: Side;
@@ -349,9 +350,12 @@ export async function getTradeDetail(db: DB, accountId: string, tradeId: string)
 		.where(eq(tradeExecution.tradeId, tradeId))
 		.orderBy(execution.executedAt);
 
+	const categorization = await getTradeCategorization(db, tradeId);
+
 	return {
 		trade: row.trade,
 		instrument: row.instrument,
-		executions: fills.map((f) => f.execution)
+		executions: fills.map((f) => f.execution),
+		categorization
 	};
 }

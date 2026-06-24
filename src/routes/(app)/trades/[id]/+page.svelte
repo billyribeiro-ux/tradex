@@ -117,6 +117,39 @@
 
 		<div class="mt-3 grid grid-cols-2 gap-3">
 			<div>
+				<label class="label" for="setup">Setup</label>
+				<input
+					id="setup"
+					name="setup"
+					class="input mt-1"
+					value={data.detail.categorization.setupName ?? ''}
+					placeholder="e.g. Breakout"
+				/>
+			</div>
+			<div>
+				<label class="label" for="emotion">Emotion</label>
+				<input
+					id="emotion"
+					name="emotion"
+					class="input mt-1"
+					value={data.detail.categorization.emotionLabel ?? ''}
+					placeholder="e.g. Confident"
+				/>
+			</div>
+		</div>
+		<div class="mt-3">
+			<label class="label" for="tags">Tags (comma-separated)</label>
+			<input
+				id="tags"
+				name="tags"
+				class="input mt-1"
+				value={data.detail.categorization.tagNames.join(', ')}
+				placeholder="momentum, news, A+"
+			/>
+		</div>
+
+		<div class="mt-3 grid grid-cols-2 gap-3">
+			<div>
 				<label class="label" for="plannedStop">Planned stop</label>
 				<input
 					id="plannedStop"

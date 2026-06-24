@@ -1,6 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getTradeDetail, applyTradeAnnotations } from '$lib/server/services/trades';
+import { applyCategorization } from '$lib/server/services/categorization';
 import { getAccount, resolveAccount } from '$lib/server/services/accounts';
 import { listPlaybooks } from '$lib/server/services/playbooks';
 import { toScaled } from '$lib/money';
@@ -39,6 +40,15 @@ export const actions: Actions = {
 			plannedStop: num('plannedStop'),
 			plannedTarget: num('plannedTarget'),
 			playbookId: ((fd.get('playbookId') as string) ?? '').trim() || null
+		});
+
+		await applyCategorization(db, locals.user.id, params.id, {
+			setupName: ((fd.get('setup') as string) ?? '').trim() || null,
+			emotionLabel: ((fd.get('emotion') as string) ?? '').trim() || null,
+			tagNames: ((fd.get('tags') as string) ?? '')
+				.split(',')
+				.map((s) => s.trim())
+				.filter(Boolean)
 		});
 		return { saved: true };
 	}
