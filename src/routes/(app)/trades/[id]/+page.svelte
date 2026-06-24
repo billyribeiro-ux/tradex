@@ -139,18 +139,35 @@
 				/>
 			</div>
 		</div>
-		<div class="mt-3">
-			<label class="label" for="confidence">Confidence (1–10)</label>
-			<input
-				id="confidence"
-				name="confidence"
-				class="input mt-1"
-				type="number"
-				min="1"
-				max="10"
-				value={t.confidence ?? ''}
-			/>
+		<div class="mt-3 grid grid-cols-2 gap-3">
+			<div>
+				<label class="label" for="confidence">Confidence (1–10)</label>
+				<input
+					id="confidence"
+					name="confidence"
+					class="input mt-1"
+					type="number"
+					min="1"
+					max="10"
+					value={t.confidence ?? ''}
+				/>
+			</div>
+			<div>
+				<label class="label" for="playbookId">Playbook</label>
+				<select id="playbookId" name="playbookId" class="input mt-1" value={t.playbookId ?? ''}>
+					<option value="">— none —</option>
+					{#each data.playbooks as p (p.id)}
+						<option value={p.id}>{p.name}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
+		{#if data.playbooks.length === 0}
+			<p class="mt-2 text-xs" style="color:var(--color-muted)">
+				Create strategies on the <a href="/playbooks" style="color:var(--color-brand)">Playbooks</a>
+				page to track rule adherence.
+			</p>
+		{/if}
 
 		{#if form?.saved}<p class="mt-3 text-sm" style="color:var(--color-up)">Saved ✓</p>{/if}
 		<p class="mt-2 text-xs" style="color:var(--color-muted)">

@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getTradeDetail, applyTradeAnnotations } from '$lib/server/services/trades';
 import { getAccount, resolveAccount } from '$lib/server/services/accounts';
+import { listPlaybooks } from '$lib/server/services/playbooks';
 import { toScaled } from '$lib/money';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -13,7 +14,8 @@ export const load: PageServerLoad = async ({ params, parent, locals }) => {
 	if (!detail) error(404, 'Trade not found');
 
 	const account = await getAccount(db, locals.user.id, accountId);
-	return { detail, currency: account?.baseCurrency ?? 'USD' };
+	const playbooks = await listPlaybooks(db, locals.user.id);
+	return { detail, currency: account?.baseCurrency ?? 'USD', playbooks };
 };
 
 export const actions: Actions = {
@@ -35,7 +37,8 @@ export const actions: Actions = {
 			notes: ((fd.get('notes') as string) ?? '').trim() || null,
 			confidence: confidenceRaw ? Number(confidenceRaw) : null,
 			plannedStop: num('plannedStop'),
-			plannedTarget: num('plannedTarget')
+			plannedTarget: num('plannedTarget'),
+			playbookId: ((fd.get('playbookId') as string) ?? '').trim() || null
 		});
 		return { saved: true };
 	}
