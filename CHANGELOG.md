@@ -41,9 +41,9 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   documented `trades` view, **the generated SQL is shown**, and it runs in a throwaway in-process
   PGlite sandbox seeded with ONLY the current account's trades — cross-tenant leakage is structurally
   impossible, with extra validation blocking writes/DDL/multi-statement/comments. (6 tests.)
-- **Tests** — 53 passing (money, grouping, metrics, CSV mapping, and a full server integration test
-  on in-memory Postgres: CSV → group → metrics → dashboard, idempotent re-import, reversal regroup).
-  CI via GitHub Actions.
+- **Tests** — 59 passing (money, grouping, metrics, CSV mapping, NL→SQL validator + sandbox, and a
+  full server integration test on in-memory Postgres: CSV → group → metrics → dashboard, idempotent
+  re-import, reversal regroup). CI via GitHub Actions.
 
 ### Deferred (next phases)
 
@@ -51,4 +51,5 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - Multi-leg options analytics, prop-firm rule monitor, Monte Carlo edge validation.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).
 - Virtualized trade table (currently server-paginated), interactive CSV column-mapper UI.
-- Rust + Axum backend (Phase 3) and Tauri 2 desktop with offline libSQL + Turso sync (Phase 4).
+- Rust + Axum backend (Phase 3) and Tauri 2 desktop with an embedded local DB synced to Neon (Phase 4).
+- Playbooks / tags / setups / journal management UIs; PWA; browser E2E (Playwright configured).
