@@ -33,12 +33,17 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   and a journal/plan editor that recomputes R-multiple; manual trade entry; CSV import with an error
   report; multi-account management (ungated); analytics breakdowns; calendar; CSV/JSON export
   (no lock-in); settings.
-- **Tests** — 53 passing (money, grouping, metrics, CSV mapping, and a full server integration test:
-  CSV → group → metrics → dashboard, idempotent re-import, reversal regroup). CI via GitHub Actions.
+- **AI Coach** — bring-your-own Anthropic key, **AES-256-GCM encrypted at rest**; `/coach` sends the
+  account's computed stats + recent closed trades to Claude (default `claude-sonnet-4-6`, with
+  Opus 4.8 / Haiku 4.5 selectable) for evidence-based, small-sample-flagged insights. Settings page
+  to manage the key. (Grounded Q&A shipped; NL→SQL query execution with shown SQL is next.)
+- **Tests** — 53 passing (money, grouping, metrics, CSV mapping, and a full server integration test
+  on in-memory Postgres: CSV → group → metrics → dashboard, idempotent re-import, reversal regroup).
+  CI via GitHub Actions.
 
 ### Deferred (next phases)
 
-- AI Coach (BYO Claude key, NL→SQL Q&A, statistically-grounded insights).
+- AI Coach **NL→SQL** querying with the generated SQL shown (read-only, account-scoped guardrails).
 - JWT/JWKS + bearer auth (added in Phase 3 for the Rust/Axum API and Tauri desktop).
 - Multi-leg options analytics, prop-firm rule monitor, Monte Carlo edge validation.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).

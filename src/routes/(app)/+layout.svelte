@@ -11,7 +11,8 @@
 		Gear,
 		SignOut,
 		Plus,
-		ChartBar
+		ChartBar,
+		Sparkle
 	} from 'phosphor-svelte';
 
 	let { data, children } = $props();
@@ -21,6 +22,7 @@
 		{ href: '/trades', label: 'Trades', icon: Table },
 		{ href: '/calendar', label: 'Calendar', icon: CalendarBlank },
 		{ href: '/analytics', label: 'Analytics', icon: ChartBar },
+		{ href: '/coach', label: 'AI Coach', icon: Sparkle },
 		{ href: '/import', label: 'Import', icon: UploadSimple },
 		{ href: '/accounts', label: 'Accounts', icon: Wallet }
 	];
