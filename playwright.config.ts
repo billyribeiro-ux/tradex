@@ -11,7 +11,9 @@ export default defineConfig({
 		env: {
 			DATABASE_URL: process.env.DATABASE_URL ?? 'pglite://.pgdata',
 			ORIGIN: `http://localhost:${PORT}`,
-			BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? 'e2e-insecure-secret-change-me'
+			BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? 'e2e-insecure-secret-change-me',
+			// Enables the dev-only seeding endpoint for the screenshot capture flow.
+			SEED_DEMO: process.env.SEED_DEMO ?? ''
 		}
 	},
 	use: { baseURL: `http://localhost:${PORT}` },
