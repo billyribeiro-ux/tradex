@@ -12,9 +12,11 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   selected via the `ADAPTER` env var.
 - **Money engine** (`$lib/money`) — scaled-integer (1e8) arithmetic with BigInt intermediates; no
   binary-float drift, Rust `i64`-portable. (11 tests)
-- **Database** — Drizzle ORM on libSQL/SQLite (local file → Turso for cloud sync). Full 26-table
-  schema covering all asset classes; money as integer minor units, time as UTC epoch ms. Migrations
-  are committed under `drizzle/` (the portability contract for the future Rust backend).
+- **Database** — Drizzle ORM on **Postgres** (Neon in production; in-process **PGlite** for local
+  dev and tests, so no DB server is needed locally). Full 26-table schema covering all asset classes;
+  money/price/qty as scaled `bigint` (1e8), time as UTC epoch ms. Migrations are committed under
+  `drizzle/` (the portability contract for the future Rust/sqlx backend). Driver auto-selected from
+  `DATABASE_URL` (`postgres://…` → Neon; otherwise PGlite).
 - **Trade grouping engine** (`$lib/domain/grouping`) — pure executions → round-trip trades:
   scale-in/out, partial fills, reversals, pro-rata fees, shorts, multipliers, open positions.
   (13 tests)

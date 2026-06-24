@@ -9,7 +9,7 @@ export (no lock-in)**, and a roadmap to a **local-first offline desktop app**.
 
 - **Frontend:** SvelteKit 2.67 · Svelte 5 (runes) · Vite 8 · TypeScript 6 (strict) · Tailwind CSS 4
 - **Icons / charts:** phosphor-svelte · lightweight-charts (equity curve) · hand-rolled SVG calendar
-- **Data:** Drizzle ORM + libSQL/SQLite (local file → Turso) · Zod validation
+- **Data:** Drizzle ORM + Postgres (Neon in prod; in-process **PGlite** for local dev & tests) · Zod
 - **Auth:** Better Auth (sessions; email/password + GitHub/Google OAuth)
 - **Tooling:** pnpm 11 · Node 24 LTS · Vitest 4 · Playwright 1.61
 - **Planned:** Rust + Axum backend (Phase 3) · Tauri 2 desktop, offline + Turso sync (Phase 4)
@@ -29,7 +29,7 @@ Requires Node 24 (`.node-version`) and pnpm 11 (Corepack).
 ```sh
 corepack enable
 pnpm install
-pnpm db:migrate        # creates local.db from committed migrations
+pnpm db:migrate        # applies committed migrations (PGlite locally, Neon in prod)
 pnpm dev               # http://localhost:5173
 ```
 

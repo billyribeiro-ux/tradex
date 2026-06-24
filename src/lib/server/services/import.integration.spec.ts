@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
-import { migrate } from 'drizzle-orm/libsql/migrator';
+import { drizzle } from 'drizzle-orm/pglite';
+import { PGlite } from '@electric-sql/pglite';
+import { migrate } from 'drizzle-orm/pglite/migrator';
 import { eq } from 'drizzle-orm';
 import * as schema from '$lib/server/db/schema';
 import { user, tradingAccount, trade } from '$lib/server/db/schema';
@@ -12,17 +12,18 @@ import { fromScaled } from '$lib/money';
 import type { DB } from '$lib/server/db';
 
 /**
- * End-to-end exercise of the real server pipeline against an in-memory libSQL
- * database using the committed migrations: CSV -> map -> dedupe -> persist ->
+ * End-to-end exercise of the real server pipeline against an in-memory Postgres
+ * (PGlite) using the committed migrations: CSV -> map -> dedupe -> persist ->
  * group -> trades -> dashboard metrics.
  */
 let db: DB;
 const ACCOUNT = 'acct-1';
 
 beforeAll(async () => {
-	const client = createClient({ url: ':memory:' });
-	db = drizzle(client, { schema });
-	await migrate(db, { migrationsFolder: 'drizzle' });
+	const client = new PGlite();
+	const pdb = drizzle(client, { schema });
+	await migrate(pdb, { migrationsFolder: 'drizzle' });
+	db = pdb as unknown as DB;
 	await db.insert(user).values({ id: 'user-1', name: 'Test', email: 'test@tradex.dev' });
 	await db
 		.insert(tradingAccount)

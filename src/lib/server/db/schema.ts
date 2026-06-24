@@ -1,11 +1,14 @@
 import {
-	sqliteTable,
+	pgTable,
 	text,
+	bigint,
 	integer,
+	boolean,
+	jsonb,
 	index,
 	uniqueIndex,
 	primaryKey
-} from 'drizzle-orm/sqlite-core';
+} from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 import { SCALE } from '$lib/money';
 import type {
@@ -23,19 +26,23 @@ import type {
 /**
  * Conventions
  * - ids: text UUIDs
- * - money / price / quantity / multiplier: integer scaled by 1e8 (see $lib/money)
- * - timestamps: integer UTC epoch milliseconds
+ * - money / price / quantity / multiplier: bigint scaled by 1e8 (see $lib/money)
+ * - timestamps / durations: bigint UTC epoch milliseconds
+ *   (bigint avoids the int4 overflow scaled money would hit; mode:'number' keeps
+ *   exact values well within Number.MAX_SAFE_INTEGER for realistic magnitudes.)
  */
 const pk = () =>
 	text('id')
 		.primaryKey()
 		.$defaultFn(() => crypto.randomUUID());
+const money = (name: string) => bigint(name, { mode: 'number' });
+const ts = (name: string) => bigint(name, { mode: 'number' });
 const createdAt = () =>
-	integer('created_at')
+	bigint('created_at', { mode: 'number' })
 		.notNull()
 		.$defaultFn(() => Date.now());
 const updatedAt = () =>
-	integer('updated_at')
+	bigint('updated_at', { mode: 'number' })
 		.notNull()
 		.$defaultFn(() => Date.now())
 		.$onUpdate(() => Date.now());
@@ -43,7 +50,7 @@ const updatedAt = () =>
 // ---------------------------------------------------------------------------
 // User settings (1:1 with Better Auth user)
 // ---------------------------------------------------------------------------
-export const userSettings = sqliteTable('user_settings', {
+export const userSettings = pgTable('user_settings', {
 	userId: text('user_id')
 		.primaryKey()
 		.references(() => user.id, { onDelete: 'cascade' }),
@@ -61,7 +68,7 @@ export const userSettings = sqliteTable('user_settings', {
 // ---------------------------------------------------------------------------
 // Accounts
 // ---------------------------------------------------------------------------
-export const tradingAccount = sqliteTable(
+export const tradingAccount = pgTable(
 	'trading_account',
 	{
 		id: pk(),
@@ -70,16 +77,13 @@ export const tradingAccount = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		broker: text('broker'),
-		assetClasses: text('asset_classes', { mode: 'json' })
-			.$type<AssetClass[]>()
-			.notNull()
-			.default(['stock']),
+		assetClasses: jsonb('asset_classes').$type<AssetClass[]>().notNull().default(['stock']),
 		baseCurrency: text('base_currency').notNull().default('USD'),
-		startingBalance: integer('starting_balance').notNull().default(0),
+		startingBalance: money('starting_balance').notNull().default(0),
 		timezone: text('timezone').notNull().default('UTC'),
-		isPropFirm: integer('is_prop_firm', { mode: 'boolean' }).notNull().default(false),
+		isPropFirm: boolean('is_prop_firm').notNull().default(false),
 		createdAt: createdAt(),
-		archivedAt: integer('archived_at')
+		archivedAt: ts('archived_at')
 	},
 	(t) => [index('trading_account_user_idx').on(t.userId)]
 );
@@ -87,7 +91,7 @@ export const tradingAccount = sqliteTable(
 // ---------------------------------------------------------------------------
 // Instruments (global reference data)
 // ---------------------------------------------------------------------------
-export const instrument = sqliteTable(
+export const instrument = pgTable(
 	'instrument',
 	{
 		id: pk(),
@@ -95,15 +99,14 @@ export const instrument = sqliteTable(
 		assetClass: text('asset_class').$type<AssetClass>().notNull(),
 		exchange: text('exchange'),
 		name: text('name'),
-		// contract size / point value, scaled (1.0 default)
-		multiplier: integer('multiplier').notNull().default(SCALE),
-		tickSize: integer('tick_size'),
+		multiplier: money('multiplier').notNull().default(SCALE),
+		tickSize: money('tick_size'),
 		currency: text('currency').notNull().default('USD')
 	},
 	(t) => [uniqueIndex('instrument_symbol_class_idx').on(t.symbol, t.assetClass)]
 );
 
-export const optionContract = sqliteTable(
+export const optionContract = pgTable(
 	'option_contract',
 	{
 		id: pk(),
@@ -111,9 +114,9 @@ export const optionContract = sqliteTable(
 			.notNull()
 			.references(() => instrument.id, { onDelete: 'cascade' }),
 		type: text('type').$type<OptionType>().notNull(),
-		strike: integer('strike').notNull(),
-		expiry: integer('expiry').notNull(),
-		multiplier: integer('multiplier')
+		strike: money('strike').notNull(),
+		expiry: ts('expiry').notNull(),
+		multiplier: money('multiplier')
 			.notNull()
 			.default(100 * SCALE)
 	},
@@ -123,7 +126,7 @@ export const optionContract = sqliteTable(
 // ---------------------------------------------------------------------------
 // Multi-leg groups (option structures: vertical, condor, ...)
 // ---------------------------------------------------------------------------
-export const multiLegGroup = sqliteTable('multi_leg_group', {
+export const multiLegGroup = pgTable('multi_leg_group', {
 	id: pk(),
 	accountId: text('account_id')
 		.notNull()
@@ -136,7 +139,7 @@ export const multiLegGroup = sqliteTable('multi_leg_group', {
 // ---------------------------------------------------------------------------
 // Executions (raw fills — the source of truth)
 // ---------------------------------------------------------------------------
-export const execution = sqliteTable(
+export const execution = pgTable(
 	'execution',
 	{
 		id: pk(),
@@ -148,11 +151,11 @@ export const execution = sqliteTable(
 			.references(() => instrument.id),
 		optionContractId: text('option_contract_id').references(() => optionContract.id),
 		side: text('side').$type<Side>().notNull(),
-		qty: integer('qty').notNull(),
-		price: integer('price').notNull(),
-		fee: integer('fee').notNull().default(0),
-		commission: integer('commission').notNull().default(0),
-		executedAt: integer('executed_at').notNull(),
+		qty: money('qty').notNull(),
+		price: money('price').notNull(),
+		fee: money('fee').notNull().default(0),
+		commission: money('commission').notNull().default(0),
+		executedAt: ts('executed_at').notNull(),
 		importBatchId: text('import_batch_id'),
 		brokerExecId: text('broker_exec_id'),
 		dedupeHash: text('dedupe_hash').notNull(),
@@ -168,7 +171,7 @@ export const execution = sqliteTable(
 // ---------------------------------------------------------------------------
 // Categorization: tags, setups, emotions, playbooks
 // ---------------------------------------------------------------------------
-export const tag = sqliteTable(
+export const tag = pgTable(
 	'tag',
 	{
 		id: pk(),
@@ -182,7 +185,7 @@ export const tag = sqliteTable(
 	(t) => [uniqueIndex('tag_user_name_idx').on(t.userId, t.name)]
 );
 
-export const setup = sqliteTable(
+export const setup = pgTable(
 	'setup',
 	{
 		id: pk(),
@@ -196,7 +199,7 @@ export const setup = sqliteTable(
 	(t) => [uniqueIndex('setup_user_name_idx').on(t.userId, t.name)]
 );
 
-export const emotion = sqliteTable(
+export const emotion = pgTable(
 	'emotion',
 	{
 		id: pk(),
@@ -218,7 +221,7 @@ export type PlaybookRules = {
 	riskRules?: string[];
 };
 
-export const playbook = sqliteTable(
+export const playbook = pgTable(
 	'playbook',
 	{
 		id: pk(),
@@ -227,7 +230,7 @@ export const playbook = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		description: text('description'),
-		rules: text('rules', { mode: 'json' }).$type<PlaybookRules>(),
+		rules: jsonb('rules').$type<PlaybookRules>(),
 		createdAt: createdAt()
 	},
 	(t) => [uniqueIndex('playbook_user_name_idx').on(t.userId, t.name)]
@@ -236,7 +239,7 @@ export const playbook = sqliteTable(
 // ---------------------------------------------------------------------------
 // Trades (derived from executions)
 // ---------------------------------------------------------------------------
-export const trade = sqliteTable(
+export const trade = pgTable(
 	'trade',
 	{
 		id: pk(),
@@ -250,29 +253,29 @@ export const trade = sqliteTable(
 		multiLegGroupId: text('multi_leg_group_id').references(() => multiLegGroup.id),
 		direction: text('direction').$type<Direction>().notNull(),
 		status: text('status').$type<TradeStatus>().notNull(),
-		openedAt: integer('opened_at').notNull(),
-		closedAt: integer('closed_at'),
-		qtyOpened: integer('qty_opened').notNull().default(0),
-		qtyClosed: integer('qty_closed').notNull().default(0),
-		avgEntry: integer('avg_entry').notNull().default(0),
-		avgExit: integer('avg_exit'),
-		grossPnl: integer('gross_pnl').notNull().default(0),
-		netPnl: integer('net_pnl').notNull().default(0),
-		fees: integer('fees').notNull().default(0),
-		rMultiple: integer('r_multiple'),
-		riskAmount: integer('risk_amount'),
-		mfe: integer('mfe'),
-		mae: integer('mae'),
-		exitEfficiency: integer('exit_efficiency'),
-		holdMs: integer('hold_ms'),
+		openedAt: ts('opened_at').notNull(),
+		closedAt: ts('closed_at'),
+		qtyOpened: money('qty_opened').notNull().default(0),
+		qtyClosed: money('qty_closed').notNull().default(0),
+		avgEntry: money('avg_entry').notNull().default(0),
+		avgExit: money('avg_exit'),
+		grossPnl: money('gross_pnl').notNull().default(0),
+		netPnl: money('net_pnl').notNull().default(0),
+		fees: money('fees').notNull().default(0),
+		rMultiple: money('r_multiple'),
+		riskAmount: money('risk_amount'),
+		mfe: money('mfe'),
+		mae: money('mae'),
+		exitEfficiency: money('exit_efficiency'),
+		holdMs: ts('hold_ms'),
 		setupId: text('setup_id').references(() => setup.id, { onDelete: 'set null' }),
 		playbookId: text('playbook_id').references(() => playbook.id, { onDelete: 'set null' }),
 		emotionId: text('emotion_id').references(() => emotion.id, { onDelete: 'set null' }),
 		confidence: integer('confidence'),
-		plannedEntry: integer('planned_entry'),
-		plannedStop: integer('planned_stop'),
-		plannedTarget: integer('planned_target'),
-		plannedQty: integer('planned_qty'),
+		plannedEntry: money('planned_entry'),
+		plannedStop: money('planned_stop'),
+		plannedTarget: money('planned_target'),
+		plannedQty: money('planned_qty'),
 		ruleComplianceScore: integer('rule_compliance_score'),
 		notes: text('notes'),
 		createdAt: createdAt(),
@@ -285,7 +288,7 @@ export const trade = sqliteTable(
 	]
 );
 
-export const tradeExecution = sqliteTable(
+export const tradeExecution = pgTable(
 	'trade_execution',
 	{
 		tradeId: text('trade_id')
@@ -301,7 +304,7 @@ export const tradeExecution = sqliteTable(
 	]
 );
 
-export const tradeTag = sqliteTable(
+export const tradeTag = pgTable(
 	'trade_tag',
 	{
 		tradeId: text('trade_id')
@@ -317,7 +320,7 @@ export const tradeTag = sqliteTable(
 // ---------------------------------------------------------------------------
 // Risk / prop-firm
 // ---------------------------------------------------------------------------
-export const propFirmConfig = sqliteTable(
+export const propFirmConfig = pgTable(
 	'prop_firm_config',
 	{
 		id: pk(),
@@ -325,9 +328,9 @@ export const propFirmConfig = sqliteTable(
 			.notNull()
 			.references(() => tradingAccount.id, { onDelete: 'cascade' }),
 		firm: text('firm').$type<PropFirm>().notNull(),
-		profitTarget: integer('profit_target'),
-		dailyLossLimit: integer('daily_loss_limit'),
-		maxDrawdown: integer('max_drawdown'),
+		profitTarget: money('profit_target'),
+		dailyLossLimit: money('daily_loss_limit'),
+		maxDrawdown: money('max_drawdown'),
 		drawdownType: text('drawdown_type').$type<DrawdownType>(),
 		minTradingDays: integer('min_trading_days'),
 		consistencyPct: integer('consistency_pct'),
@@ -339,7 +342,7 @@ export const propFirmConfig = sqliteTable(
 // ---------------------------------------------------------------------------
 // Journal & attachments
 // ---------------------------------------------------------------------------
-export const journalEntry = sqliteTable(
+export const journalEntry = pgTable(
 	'journal_entry',
 	{
 		id: pk(),
@@ -357,7 +360,7 @@ export const journalEntry = sqliteTable(
 	(t) => [index('journal_entry_user_date_idx').on(t.userId, t.date)]
 );
 
-export const attachment = sqliteTable('attachment', {
+export const attachment = pgTable('attachment', {
 	id: pk(),
 	kind: text('kind').$type<AttachmentKind>().notNull(),
 	tradeId: text('trade_id').references(() => trade.id, { onDelete: 'cascade' }),
@@ -373,7 +376,7 @@ export const attachment = sqliteTable('attachment', {
 // ---------------------------------------------------------------------------
 // Import
 // ---------------------------------------------------------------------------
-export const importMappingTemplate = sqliteTable('import_mapping_template', {
+export const importMappingTemplate = pgTable('import_mapping_template', {
 	id: pk(),
 	userId: text('user_id')
 		.notNull()
@@ -381,11 +384,11 @@ export const importMappingTemplate = sqliteTable('import_mapping_template', {
 	broker: text('broker').notNull(),
 	name: text('name').notNull(),
 	assetClass: text('asset_class').$type<AssetClass>(),
-	columnMap: text('column_map', { mode: 'json' }).$type<Record<string, string>>().notNull(),
+	columnMap: jsonb('column_map').$type<Record<string, string>>().notNull(),
 	createdAt: createdAt()
 });
 
-export const importBatch = sqliteTable(
+export const importBatch = pgTable(
 	'import_batch',
 	{
 		id: pk(),
@@ -409,7 +412,7 @@ export const importBatch = sqliteTable(
 // ---------------------------------------------------------------------------
 // Sharing, AI insights, dashboard layouts, saved views
 // ---------------------------------------------------------------------------
-export const shareLink = sqliteTable(
+export const shareLink = pgTable(
 	'share_link',
 	{
 		id: pk(),
@@ -418,14 +421,14 @@ export const shareLink = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		tradeId: text('trade_id').references(() => trade.id, { onDelete: 'cascade' }),
 		token: text('token').notNull(),
-		scope: text('scope', { mode: 'json' }).$type<{ hideSize?: boolean; hidePnl?: boolean }>(),
-		expiresAt: integer('expires_at'),
+		scope: jsonb('scope').$type<{ hideSize?: boolean; hidePnl?: boolean }>(),
+		expiresAt: ts('expires_at'),
 		createdAt: createdAt()
 	},
 	(t) => [uniqueIndex('share_link_token_idx').on(t.token)]
 );
 
-export const aiInsight = sqliteTable(
+export const aiInsight = pgTable(
 	'ai_insight',
 	{
 		id: pk(),
@@ -435,26 +438,26 @@ export const aiInsight = sqliteTable(
 		accountId: text('account_id').references(() => tradingAccount.id, { onDelete: 'cascade' }),
 		kind: text('kind').notNull(),
 		summary: text('summary').notNull(),
-		evidenceTradeIds: text('evidence_trade_ids', { mode: 'json' }).$type<string[]>(),
-		stat: text('stat', { mode: 'json' }).$type<{ pValue?: number; sampleSize?: number }>(),
-		dismissedAt: integer('dismissed_at'),
+		evidenceTradeIds: jsonb('evidence_trade_ids').$type<string[]>(),
+		stat: jsonb('stat').$type<{ pValue?: number; sampleSize?: number }>(),
+		dismissedAt: ts('dismissed_at'),
 		createdAt: createdAt()
 	},
 	(t) => [index('ai_insight_user_idx').on(t.userId)]
 );
 
-export const dashboardLayout = sqliteTable('dashboard_layout', {
+export const dashboardLayout = pgTable('dashboard_layout', {
 	id: pk(),
 	userId: text('user_id')
 		.notNull()
 		.references(() => user.id, { onDelete: 'cascade' }),
 	name: text('name').notNull().default('Default'),
-	widgets: text('widgets', { mode: 'json' }).$type<unknown[]>(),
-	isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+	widgets: jsonb('widgets').$type<unknown[]>(),
+	isDefault: boolean('is_default').notNull().default(false),
 	createdAt: createdAt()
 });
 
-export const savedView = sqliteTable(
+export const savedView = pgTable(
 	'saved_view',
 	{
 		id: pk(),
@@ -463,7 +466,7 @@ export const savedView = sqliteTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		screen: text('screen').notNull(),
 		name: text('name').notNull(),
-		filters: text('filters', { mode: 'json' }).$type<Record<string, unknown>>(),
+		filters: jsonb('filters').$type<Record<string, unknown>>(),
 		createdAt: createdAt()
 	},
 	(t) => [index('saved_view_user_screen_idx').on(t.userId, t.screen)]
