@@ -44,14 +44,19 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - **Playbooks** — define strategies with entry criteria + risk rules (`/playbooks`), assign one to a
   trade from the trade detail, and see per-playbook performance (net P&L, win rate, profit factor,
   trade count) across all accounts. Feeds the TradeX Score's rule-adherence factor.
-- **Tests** — 59 passing (money, grouping, metrics, CSV mapping, NL→SQL validator + sandbox, and a
+- **Risk & validation** (`/risk`) — **Monte Carlo edge validation** (reproducible resampling of your
+  own per-trade returns → probability of profit, **probability of ruin**, terminal P&L percentiles,
+  drawdown distribution) and a **prop-firm rule monitor** (profit target, daily-loss limit,
+  static/trailing max drawdown, min trading days, consistency) with live pass/breach status and an
+  editable per-account config. (10 tests.)
+- **Tests** — 69 passing (money, grouping, metrics, CSV mapping, NL→SQL validator + sandbox, and a
   full server integration test on in-memory Postgres: CSV → group → metrics → dashboard, idempotent
   re-import, reversal regroup). CI via GitHub Actions.
 
 ### Deferred (next phases)
 
 - JWT/JWKS + bearer auth (added in Phase 3 for the Rust/Axum API and Tauri desktop).
-- Multi-leg options analytics, prop-firm rule monitor, Monte Carlo edge validation.
+- Multi-leg options analytics; alt-exit backtest simulation.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).
 - Virtualized trade table (currently server-paginated), interactive CSV column-mapper UI.
 - Rust + Axum backend (Phase 3) and Tauri 2 desktop with an embedded local DB synced to Neon (Phase 4).

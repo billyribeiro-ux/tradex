@@ -13,7 +13,8 @@
 		Plus,
 		ChartBar,
 		Sparkle,
-		BookOpen
+		BookOpen,
+		ShieldCheck
 	} from 'phosphor-svelte';
 
 	let { data, children } = $props();
@@ -24,6 +25,7 @@
 		{ href: '/calendar', label: 'Calendar', icon: CalendarBlank },
 		{ href: '/analytics', label: 'Analytics', icon: ChartBar },
 		{ href: '/playbooks', label: 'Playbooks', icon: BookOpen },
+		{ href: '/risk', label: 'Risk', icon: ShieldCheck },
 		{ href: '/coach', label: 'AI Coach', icon: Sparkle },
 		{ href: '/import', label: 'Import', icon: UploadSimple },
 		{ href: '/accounts', label: 'Accounts', icon: Wallet }
