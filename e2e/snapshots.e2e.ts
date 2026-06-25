@@ -39,8 +39,8 @@ const APP_PAGES: [path: string, name: string][] = [
 
 async function shot(page: import('@playwright/test').Page, name: string) {
 	await page.waitForLoadState('networkidle').catch(() => {});
-	// Settle fonts/charts before capture.
-	await page.waitForTimeout(400);
+	// Settle fonts, D3 draw-in animations, and the WebGL hero before capture.
+	await page.waitForTimeout(900);
 	await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
 }
 

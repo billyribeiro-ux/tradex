@@ -16,6 +16,12 @@ export default defineConfig({
 			SEED_DEMO: process.env.SEED_DEMO ?? ''
 		}
 	},
-	use: { baseURL: `http://localhost:${PORT}` },
+	use: {
+		baseURL: `http://localhost:${PORT}`,
+		// Force software WebGL so the Threlte/3D surfaces render in headless CI.
+		launchOptions: {
+			args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+		}
+	},
 	testMatch: '**/*.e2e.{ts,js}'
 });

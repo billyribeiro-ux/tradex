@@ -1,20 +1,47 @@
 @import 'tailwindcss';
 
-/* TradeX — dark-first design tokens (Tailwind v4 CSS-first theme). */
+/* ============================================================================
+   TradeX — institutional dark design system (Tailwind v4 CSS-first theme).
+   "Terminal-grade": deep palette, hairline chrome, tabular numerals, elevation.
+   ========================================================================== */
 @theme {
-	--color-bg: #0b0f17;
-	--color-surface: #131927;
-	--color-surface-2: #1b2233;
-	--color-border: #273043;
-	--color-muted: #8a96ac;
-	--color-text: #e7ecf3;
+	/* Surfaces — cool near-black with subtle blue depth */
+	--color-bg: #070a11;
+	--color-bg-2: #0a0e17;
+	--color-surface: #111726;
+	--color-surface-2: #1a2233;
+	--color-surface-3: #232d42;
+	--color-border: #28324a;
+	--color-hairline: #1d2536;
+
+	/* Text */
+	--color-muted: #8694ad;
+	--color-faint: #5b6883;
+	--color-text: #e8edf6;
+
+	/* Brand + semantics */
 	--color-brand: #14e0a3;
 	--color-brand-600: #0fb98a;
-	--color-up: #16c784;
-	--color-down: #ea3943;
+	--color-up: #1fcf83;
+	--color-down: #f6465d;
 	--color-accent: #6c8cff;
+	--color-gold: #e8b339;
 
-	--radius-card: 0.9rem;
+	/* Soft tints for fills / glows */
+	--color-up-soft: rgba(31, 207, 131, 0.14);
+	--color-down-soft: rgba(246, 70, 93, 0.14);
+	--color-brand-soft: rgba(20, 224, 163, 0.12);
+
+	--radius-card: 0.85rem;
+
+	--font-mono:
+		'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+	--font-sans:
+		'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+		sans-serif;
+
+	--shadow-panel: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+	--shadow-pop: 0 12px 40px -8px rgba(0, 0, 0, 0.75);
 }
 
 :root {
@@ -25,25 +52,48 @@ html,
 body {
 	background-color: var(--color-bg);
 	color: var(--color-text);
-	font-family:
-		'Inter',
-		ui-sans-serif,
-		system-ui,
-		-apple-system,
-		'Segoe UI',
-		Roboto,
-		Helvetica,
-		Arial,
-		sans-serif;
+	font-family: var(--font-sans);
 }
 
 body {
 	min-height: 100dvh;
 	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+/* Subtle institutional backdrop: faint grid + soft brand aurora, fixed. */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(900px 500px at 78% -8%, rgba(20, 224, 163, 0.06), transparent 60%),
+		radial-gradient(800px 600px at 0% 0%, rgba(108, 140, 255, 0.05), transparent 55%),
+		linear-gradient(var(--color-hairline) 1px, transparent 1px),
+		linear-gradient(90deg, var(--color-hairline) 1px, transparent 1px);
+	background-size:
+		100% 100%,
+		100% 100%,
+		44px 44px,
+		44px 44px;
+	background-position:
+		0 0,
+		0 0,
+		-1px -1px,
+		-1px -1px;
+	opacity: 0.5;
+	mask-image: radial-gradient(circle at 50% 30%, #000 60%, transparent 100%);
 }
 
 * {
 	border-color: var(--color-border);
+}
+
+::selection {
+	background: var(--color-brand-soft);
+	color: var(--color-text);
 }
 
 ::-webkit-scrollbar {
@@ -53,14 +103,90 @@ body {
 ::-webkit-scrollbar-thumb {
 	background: var(--color-surface-2);
 	border-radius: 9999px;
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-surface-3);
+	background-clip: padding-box;
+}
+
+/* Numerals: tabular by default everywhere for clean column alignment. */
+.tnum,
+.kpi-val,
+.dtable td,
+.dtable th {
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: 'tnum' 1;
+}
+.mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.01em;
 }
 
 @layer components {
+	/* --- Panels / cards --------------------------------------------------- */
 	.card {
-		background-color: var(--color-surface);
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 120px), var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-card);
+		box-shadow: var(--shadow-panel);
 	}
+	.panel {
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 90px), var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		box-shadow: var(--shadow-panel);
+		overflow: hidden;
+	}
+	.panel-h {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.7rem 1rem;
+		border-bottom: 1px solid var(--color-hairline);
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent);
+	}
+	.panel-t {
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+	}
+
+	/* --- KPI --------------------------------------------------------------- */
+	.kpi-val {
+		font-size: 1.7rem;
+		font-weight: 700;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+	}
+	.delta {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		padding: 0.1rem 0.4rem;
+		border-radius: 0.4rem;
+	}
+	.delta-up {
+		color: var(--color-up);
+		background: var(--color-up-soft);
+	}
+	.delta-down {
+		color: var(--color-down);
+		background: var(--color-down-soft);
+	}
+
+	/* --- Buttons ----------------------------------------------------------- */
 	.btn {
 		display: inline-flex;
 		align-items: center;
@@ -74,14 +200,20 @@ body {
 		transition:
 			background-color 0.15s ease,
 			border-color 0.15s ease,
+			transform 0.1s ease,
+			box-shadow 0.15s ease,
 			opacity 0.15s ease;
 	}
+	.btn:active {
+		transform: translateY(1px);
+	}
 	.btn-primary {
-		background-color: var(--color-brand);
-		color: #05281f;
+		background: linear-gradient(180deg, var(--color-brand), var(--color-brand-600));
+		color: #04231b;
+		box-shadow: 0 6px 18px -8px rgba(20, 224, 163, 0.6);
 	}
 	.btn-primary:hover {
-		background-color: var(--color-brand-600);
+		background: var(--color-brand);
 	}
 	.btn-ghost {
 		background-color: transparent;
@@ -90,10 +222,13 @@ body {
 	}
 	.btn-ghost:hover {
 		background-color: var(--color-surface-2);
+		border-color: var(--color-surface-3);
 	}
+
+	/* --- Inputs ------------------------------------------------------------ */
 	.input {
 		width: 100%;
-		background-color: var(--color-surface-2);
+		background-color: var(--color-bg-2);
 		border: 1px solid var(--color-border);
 		border-radius: 0.6rem;
 		padding: 0.5rem 0.7rem;
@@ -105,10 +240,76 @@ body {
 		outline-offset: -1px;
 	}
 	.label {
-		font-size: 0.78rem;
+		font-size: 0.72rem;
 		font-weight: 600;
 		color: var(--color-muted);
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.06em;
+		font-family: var(--font-mono);
+	}
+
+	/* --- Chips / badges ---------------------------------------------------- */
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		padding: 0.15rem 0.5rem;
+		border-radius: 9999px;
+		background: var(--color-surface-2);
+		color: var(--color-muted);
+		border: 1px solid var(--color-hairline);
+	}
+
+	/* --- Data table -------------------------------------------------------- */
+	.dtable {
+		width: 100%;
+		border-collapse: separate;
+		border-spacing: 0;
+		font-size: 0.82rem;
+	}
+	.dtable thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		text-align: right;
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-faint);
+		padding: 0.55rem 0.85rem;
+		background: var(--color-surface);
+		border-bottom: 1px solid var(--color-border);
+		white-space: nowrap;
+	}
+	.dtable thead th:first-child,
+	.dtable tbody td:first-child {
+		text-align: left;
+	}
+	.dtable tbody td {
+		text-align: right;
+		padding: 0.6rem 0.85rem;
+		border-bottom: 1px solid var(--color-hairline);
+		color: var(--color-text);
+		white-space: nowrap;
+	}
+	.dtable tbody tr {
+		transition: background-color 0.12s ease;
+	}
+	.dtable tbody tr:hover {
+		background: var(--color-surface-2);
+	}
+}
+
+/* Respect reduced-motion: GSAP also checks this, but kill CSS motion too. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		transition-duration: 0.001ms !important;
 	}
 }

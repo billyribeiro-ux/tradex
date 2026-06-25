@@ -8,6 +8,8 @@
 		Sparkle,
 		ArrowRight
 	} from 'phosphor-svelte';
+	import Hero3D from '$lib/components/three/Hero3D.svelte';
+	import { reveal } from '$lib/motion';
 
 	const features = [
 		{
@@ -88,41 +90,63 @@
 	</header>
 
 	<main>
-		<!-- Hero -->
-		<section class="mx-auto max-w-6xl px-6 pt-12 pb-16 text-center sm:pt-20">
-			<span
-				class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
-				style="background:var(--color-surface-2);color:var(--color-muted)"
-			>
-				<span style="color:var(--color-brand)">●</span> Built for serious, self-improving traders
-			</span>
-
-			<h1 class="mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
-				The trading journal that does the
-				<span style="color:var(--color-brand)">analysis</span> for you.
-			</h1>
-
-			<p class="mx-auto mt-5 max-w-2xl text-lg" style="color:var(--color-muted)">
-				Import your fills, and TradeX groups them into trades, computes your real stats, scores your
-				process, and shows you where your edge actually is.
-			</p>
-
-			<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-				<a href="/signup" class="btn btn-primary px-5 py-3 text-base">
-					Start journaling free <ArrowRight size={18} weight="bold" />
-				</a>
-				<a href="/login" class="btn btn-ghost px-5 py-3 text-base">I already have an account</a>
+		<!-- Hero with live 3D data-surface backdrop -->
+		<section class="relative overflow-hidden">
+			<div class="absolute inset-0" style="height:760px">
+				<Hero3D />
+				<!-- legibility scrim -->
+				<div
+					class="absolute inset-0"
+					style="background:linear-gradient(180deg, rgba(7,10,17,0.35) 0%, rgba(7,10,17,0.6) 55%, var(--color-bg) 100%)"
+				></div>
 			</div>
 
-			<!-- Mock stat strip -->
-			<div class="card mx-auto mt-14 max-w-4xl p-2">
-				<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-					{#each stats as s (s.label)}
-						<div class="rounded-lg p-5 text-left" style="background:var(--color-surface-2)">
-							<div class="label">{s.label}</div>
-							<div class="mt-1 text-2xl font-bold" style="color:{s.tone}">{s.value}</div>
-						</div>
-					{/each}
+			<div class="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-16 text-center sm:pt-24">
+				<span
+					class="chip"
+					use:reveal={{ delay: 0.05, y: 8 }}
+					style="background:rgba(20,224,163,0.08);color:var(--color-muted)"
+				>
+					<span style="color:var(--color-brand)">●</span> Built for serious, self-improving traders
+				</span>
+
+				<h1
+					class="mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl"
+					use:reveal={{ delay: 0.12 }}
+				>
+					The trading journal that does the
+					<span style="color:var(--color-brand)">analysis</span> for you.
+				</h1>
+
+				<p
+					class="mx-auto mt-5 max-w-2xl text-lg"
+					style="color:var(--color-muted)"
+					use:reveal={{ delay: 0.2 }}
+				>
+					Import your fills, and TradeX groups them into trades, computes your real stats, scores
+					your process, and shows you where your edge actually is.
+				</p>
+
+				<div
+					class="mt-8 flex flex-wrap items-center justify-center gap-3"
+					use:reveal={{ delay: 0.28 }}
+				>
+					<a href="/signup" class="btn btn-primary px-5 py-3 text-base">
+						Start journaling free <ArrowRight size={18} weight="bold" />
+					</a>
+					<a href="/login" class="btn btn-ghost px-5 py-3 text-base">I already have an account</a>
+				</div>
+
+				<!-- Live KPI strip -->
+				<div class="panel mx-auto mt-16 max-w-4xl p-2" use:reveal={{ delay: 0.36 }}>
+					<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+						{#each stats as s (s.label)}
+							<div class="rounded-lg p-5 text-left" style="background:var(--color-bg-2)">
+								<div class="label">{s.label}</div>
+								<div class="kpi-val mono mt-1" style="color:{s.tone}">{s.value}</div>
+							</div>
+						{/each}
+					</div>
 				</div>
 			</div>
 		</section>
