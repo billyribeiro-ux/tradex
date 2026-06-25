@@ -40,11 +40,12 @@ test('sign up, record a trade, and see it in the log', async ({ page }) => {
 	await page.fill('input[name=exitAt]', '2026-06-01T15:30');
 	await page.click('button[type=submit]');
 
-	// The new symbol shows up in the trade log. Re-navigate until it appears —
-	// the submit's create+redirect commits asynchronously, so a single goto can
-	// race ahead of the write.
-	await expect(async () => {
-		await page.goto('/trades');
-		await expect(page.getByText(symbol).first()).toBeVisible({ timeout: 5000 });
-	}).toPass({ timeout: 30000 });
+	// Wait for the create+redirect to land on the trade detail page before
+	// navigating away — `use:enhance` submits via fetch, and an early goto would
+	// abort that in-flight POST so the trade would never be written.
+	await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 20000 });
+
+	// the new symbol shows up in the trade log
+	await page.goto('/trades');
+	await expect(page.getByText(symbol).first()).toBeVisible({ timeout: 15000 });
 });
