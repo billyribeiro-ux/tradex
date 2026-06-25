@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { listTrades } from '$lib/server/services/trades';
 import { getAccount } from '$lib/server/services/accounts';
+import { tzWeekday } from '$lib/datetime';
 import type { PageServerLoad } from './$types';
 
 export interface BreakdownRow {
@@ -11,6 +12,15 @@ export interface BreakdownRow {
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT: Record<string, string> = {
+	Sunday: 'Sun',
+	Monday: 'Mon',
+	Tuesday: 'Tue',
+	Wednesday: 'Wed',
+	Thursday: 'Thu',
+	Friday: 'Fri',
+	Saturday: 'Sat'
+};
 
 function fold(rows: { key: string; netPnl: number }[]): BreakdownRow[] {
 	const m = new Map<string, BreakdownRow>();
@@ -29,10 +39,11 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	if (!accountId || !locals.user)
 		return { byWeekday: [], bySymbol: [], byAsset: [], pnls: [], currency: 'USD' };
 	const account = await getAccount(db, locals.user.id, accountId);
+	const tz = account?.timezone ?? 'UTC';
 	const closed = await listTrades(db, accountId, { status: 'closed', limit: 5000 });
 
 	const byWeekday = fold(
-		closed.map((t) => ({ key: WEEKDAYS[new Date(t.openedAt).getUTCDay()]!, netPnl: t.netPnl }))
+		closed.map((t) => ({ key: SHORT[tzWeekday(t.openedAt, tz)] ?? '', netPnl: t.netPnl }))
 	).sort((a, b) => WEEKDAYS.indexOf(a.key) - WEEKDAYS.indexOf(b.key));
 
 	const bySymbol = fold(closed.map((t) => ({ key: t.symbol, netPnl: t.netPnl })))

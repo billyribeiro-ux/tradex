@@ -1,4 +1,5 @@
 import { toScaled, fromScaled, divScaled, mulScaled, SCALE } from '$lib/money';
+import { tzDate } from '$lib/datetime';
 import type { PerformanceMetrics, ScoreInputs, ScoreBreakdown } from './types';
 
 /** Minimal shape needed to compute aggregate performance. */
@@ -21,7 +22,10 @@ export const INFINITE_RATIO = toScaled(9999);
  * Pure: scaled-integer in, scaled-integer out. Ordering for drawdown/streaks is
  * by closedAt (ties keep input order).
  */
-export function computePerformance(trades: readonly ClosedTradeLike[]): PerformanceMetrics {
+export function computePerformance(
+	trades: readonly ClosedTradeLike[],
+	timezone = 'UTC'
+): PerformanceMetrics {
 	const ordered = [...trades].sort((a, b) => (a.closedAt ?? 0) - (b.closedAt ?? 0));
 	const empty: PerformanceMetrics = {
 		tradeCount: 0,
@@ -106,7 +110,7 @@ export function computePerformance(trades: readonly ClosedTradeLike[]): Performa
 			holdCount++;
 		}
 
-		const day = utcDay(t.closedAt ?? 0);
+		const day = tzDate(t.closedAt ?? 0, timezone);
 		dayPnl.set(day, (dayPnl.get(day) ?? 0) + t.netPnl);
 	}
 
@@ -278,8 +282,4 @@ export function computeRMultiple(args: {
 	const riskAmount = mulScaled(mulScaled(perUnitRisk, args.qty), args.multiplier);
 	if (riskAmount <= 0) return null;
 	return { rMultiple: divScaled(args.netPnl, riskAmount), riskAmount };
-}
-
-function utcDay(ms: number): string {
-	return new Date(ms).toISOString().slice(0, 10);
 }

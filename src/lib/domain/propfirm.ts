@@ -1,3 +1,4 @@
+import { tzDate } from '$lib/datetime';
 import type { DrawdownType } from './enums';
 
 /**
@@ -43,15 +44,16 @@ export interface PropFirmStatus {
 export function evaluatePropFirm(
 	config: PropFirmConfigInput,
 	trades: readonly PropTrade[],
-	startingBalance = 0
+	startingBalance = 0,
+	timezone = 'UTC'
 ): PropFirmStatus {
 	const ordered = [...trades].sort((a, b) => (a.closedAt ?? 0) - (b.closedAt ?? 0));
 	const netPnl = ordered.reduce((s, t) => s + t.netPnl, 0);
 
-	// daily P&L buckets
+	// daily P&L buckets, in the firm's local trading day
 	const dayPnl = new Map<string, number>();
 	for (const t of ordered) {
-		const day = new Date(t.closedAt ?? 0).toISOString().slice(0, 10);
+		const day = tzDate(t.closedAt ?? 0, timezone);
 		dayPnl.set(day, (dayPnl.get(day) ?? 0) + t.netPnl);
 	}
 	const tradingDays = dayPnl.size;

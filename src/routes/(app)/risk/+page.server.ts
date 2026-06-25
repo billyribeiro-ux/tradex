@@ -46,7 +46,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 		? evaluatePropFirm(
 				config,
 				trades.map((t) => ({ netPnl: t.netPnl, closedAt: t.closedAt })),
-				account.startingBalance
+				account.startingBalance,
+				account.timezone
 			)
 		: null;
 

@@ -28,7 +28,7 @@ export async function coachAvailable(db: DB, userId: string): Promise<boolean> {
 export async function askCoach(
 	db: DB,
 	userId: string,
-	account: { id: string; startingBalance: number; baseCurrency: string },
+	account: { id: string; startingBalance: number; baseCurrency: string; timezone?: string },
 	question: string
 ): Promise<{ answer: string } | { error: 'no-key' | 'bad-key' | 'api-error'; detail?: string }> {
 	const s = await getSettings(db, userId);
@@ -75,7 +75,7 @@ async function buildContext(
 	);
 
 	return [
-		`ACCOUNT STATS (currency ${cur}, all values already converted to ${cur}):`,
+		`ACCOUNT STATS (amounts in ${cur}):`,
 		`- Closed trades: ${m.tradeCount} (${m.winCount}W / ${m.lossCount}L), win rate ${(fromScaled(m.winRate) * 100).toFixed(1)}%`,
 		`- Net P&L: ${formatMoney(m.netPnl, cur)} | Expectancy/trade: ${formatMoney(m.expectancy, cur)}`,
 		`- Profit factor: ${ratio(m.profitFactor)} | Avg win/loss ratio: ${ratio(m.avgWinLossRatio)}`,

@@ -10,6 +10,17 @@
 		{ key: 'closed', label: 'Closed' },
 		{ key: 'open', label: 'Open' }
 	];
+
+	// Build a page link that preserves the active status filter.
+	const pageHref = (p: number) => {
+		const u = new URLSearchParams();
+		if (data.status) u.set('status', data.status);
+		if (p > 1) u.set('page', String(p));
+		const s = u.toString();
+		return s ? `?${s}` : '?';
+	};
+	const from = $derived((data.page - 1) * data.pageSize + 1);
+	const to = $derived(Math.min(data.page * data.pageSize, data.total));
 </script>
 
 <svelte:head><title>Trades · TradeX</title></svelte:head>
@@ -90,5 +101,24 @@
 				{/each}
 			</tbody>
 		</table>
+	</div>
+
+	<div class="mt-3 flex items-center justify-between text-xs" style="color:var(--color-muted)">
+		<span class="mono">Showing {from}–{to} of {data.total}</span>
+		{#if data.pageCount > 1}
+			<div class="flex items-center gap-2">
+				{#if data.page > 1}
+					<a href={pageHref(data.page - 1)} class="btn btn-ghost text-xs">← Prev</a>
+				{:else}
+					<span class="btn btn-ghost text-xs opacity-40">← Prev</span>
+				{/if}
+				<span class="mono">Page {data.page} / {data.pageCount}</span>
+				{#if data.page < data.pageCount}
+					<a href={pageHref(data.page + 1)} class="btn btn-ghost text-xs">Next →</a>
+				{:else}
+					<span class="btn btn-ghost text-xs opacity-40">Next →</span>
+				{/if}
+			</div>
+		{/if}
 	</div>
 {/if}

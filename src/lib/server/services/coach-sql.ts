@@ -5,6 +5,7 @@ import { getSettings } from './accounts';
 import { listTrades } from './trades';
 import { decryptSecret } from '$lib/server/crypto';
 import { fromScaled } from '$lib/money';
+import { tzDate, tzWeekday, tzHour } from '$lib/datetime';
 import { DEFAULT_MODEL } from './coach';
 
 /**
@@ -24,12 +25,10 @@ const COLUMNS = `symbol text, asset_class text, direction text, status text,
 
 const SCHEMA_DOC = `Table "trades" (one row per round-trip trade for the current account):
 - symbol, asset_class (stock|future|forex|option|crypto), direction (long|short), status (open|closed)
-- opened_at, closed_at (timestamptz), date (YYYY-MM-DD of open), day_of_week (Monday..Sunday), hour (0-23 UTC of open)
+- opened_at, closed_at (timestamptz), date (YYYY-MM-DD of open), day_of_week (Monday..Sunday), hour (0-23 of open, in the account timezone)
 - qty, avg_entry, avg_exit, gross_pnl, net_pnl, fees, r_multiple, hold_minutes (real numbers)
 - is_win (boolean, net_pnl > 0)
-Currency values are already plain numbers in the account currency.`;
-
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+Currency values are plain numbers in the account's currency.`;
 
 // Blocks writes, DDL, and unbounded/DoS constructs (PGlite runs in-process, so
 // a runaway query — generate_series, recursive CTE, repeat() — would block the
@@ -70,20 +69,19 @@ export function validateSelect(
 }
 
 /** Build the per-account dataset rows that seed the sandbox `trades` table. */
-export async function buildTradesDataset(db: DB, accountId: string) {
+export async function buildTradesDataset(db: DB, accountId: string, timezone = 'UTC') {
 	const trades = await listTrades(db, accountId, { limit: 5000 });
 	return trades.map((t) => {
-		const opened = new Date(t.openedAt);
 		return {
 			symbol: t.symbol,
 			asset_class: t.assetClass,
 			direction: t.direction,
 			status: t.status,
-			opened_at: opened.toISOString(),
+			opened_at: new Date(t.openedAt).toISOString(),
 			closed_at: t.closedAt != null ? new Date(t.closedAt).toISOString() : null,
-			date: opened.toISOString().slice(0, 10),
-			day_of_week: WEEKDAYS[opened.getUTCDay()],
-			hour: opened.getUTCHours(),
+			date: tzDate(t.openedAt, timezone),
+			day_of_week: tzWeekday(t.openedAt, timezone),
+			hour: tzHour(t.openedAt, timezone),
 			qty: fromScaled(t.qtyOpened),
 			avg_entry: fromScaled(t.avgEntry),
 			avg_exit: t.avgExit != null ? fromScaled(t.avgExit) : null,
@@ -148,7 +146,7 @@ export async function runIsolatedQuery(
 export async function coachQuery(
 	db: DB,
 	userId: string,
-	account: { id: string },
+	account: { id: string; timezone?: string },
 	question: string
 ): Promise<QueryResult | CoachQueryError> {
 	const s = await getSettings(db, userId);
@@ -177,7 +175,7 @@ export async function coachQuery(
 	if (!valid.ok) return { error: 'unsafe-sql', detail: valid.reason };
 
 	try {
-		const dataset = await buildTradesDataset(db, account.id);
+		const dataset = await buildTradesDataset(db, account.id, account.timezone);
 		const out = await runIsolatedQuery(dataset, valid.sql);
 		return { sql: valid.sql, columns: out.columns, rows: out.rows, rowCount: out.rows.length };
 	} catch (e) {

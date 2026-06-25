@@ -9,6 +9,7 @@ import {
 	type EquityPoint
 } from '$lib/domain/metrics';
 import { toScaled, divScaled } from '$lib/money';
+import { tzDate } from '$lib/datetime';
 import type { PerformanceMetrics, ScoreBreakdown } from '$lib/domain/types';
 
 export interface CalendarDay {
@@ -31,7 +32,7 @@ export interface DashboardData {
  */
 export async function getDashboard(
 	db: DB,
-	account: { id: string; startingBalance: number },
+	account: { id: string; startingBalance: number; timezone?: string },
 	range: { from?: number; to?: number } = {}
 ): Promise<DashboardData> {
 	const conds = [eq(trade.accountId, account.id)];
@@ -61,7 +62,8 @@ export async function getDashboard(
 		closedAt: r.closedAt
 	}));
 
-	const metrics = computePerformance(closedLike);
+	const tz = account.timezone ?? 'UTC';
+	const metrics = computePerformance(closedLike, tz);
 	const equity = computeEquityCurve(closedLike, account.startingBalance);
 
 	// rule adherence: share of closed trades that followed a playbook (v1 proxy)
@@ -83,13 +85,16 @@ export async function getDashboard(
 		{ grossProfit: metrics.grossProfit }
 	);
 
-	return { metrics, score, equity, calendar: buildCalendar(closed), openPositions };
+	return { metrics, score, equity, calendar: buildCalendar(closed, tz), openPositions };
 }
 
-function buildCalendar(closed: { closedAt: number | null; netPnl: number }[]): CalendarDay[] {
+function buildCalendar(
+	closed: { closedAt: number | null; netPnl: number }[],
+	tz = 'UTC'
+): CalendarDay[] {
 	const byDay = new Map<string, { netPnl: number; trades: number }>();
 	for (const t of closed) {
-		const date = new Date(t.closedAt ?? 0).toISOString().slice(0, 10);
+		const date = tzDate(t.closedAt ?? 0, tz);
 		const cur = byDay.get(date) ?? { netPnl: 0, trades: 0 };
 		cur.netPnl += t.netPnl;
 		cur.trades += 1;

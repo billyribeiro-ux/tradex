@@ -13,7 +13,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const dashboard = await getDashboard(db, {
 		id: account.id,
-		startingBalance: account.startingBalance
+		startingBalance: account.startingBalance,
+		timezone: account.timezone
 	});
 	const recent = await listTrades(db, account.id, { limit: 8 });
 
