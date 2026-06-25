@@ -11,8 +11,8 @@ test('sign up, record a trade, and see it in the log', async ({ page }) => {
 	const symbol = `T${stamp % 100000}`;
 
 	// unauthenticated → login
-	await page.goto('/');
-	await expect(page).toHaveURL(/\/(login|signup)/);
+	await page.goto('/dashboard');
+	await expect(page).toHaveURL(/\/login/);
 
 	// sign up
 	await page.goto('/signup');

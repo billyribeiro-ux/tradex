@@ -27,7 +27,7 @@ function fold(rows: { key: string; netPnl: number }[]): BreakdownRow[] {
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { accountId } = await parent();
 	if (!accountId || !locals.user)
-		return { byWeekday: [], bySymbol: [], byAsset: [], currency: 'USD' };
+		return { byWeekday: [], bySymbol: [], byAsset: [], pnls: [], currency: 'USD' };
 	const account = await getAccount(db, locals.user.id, accountId);
 	const closed = await listTrades(db, accountId, { status: 'closed', limit: 5000 });
 
@@ -41,5 +41,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const byAsset = fold(closed.map((t) => ({ key: t.assetClass, netPnl: t.netPnl })));
 
-	return { byWeekday, bySymbol, byAsset, currency: account?.baseCurrency ?? 'USD' };
+	// Per-trade P&L for the distribution histogram (scaled).
+	const pnls = closed.map((t) => t.netPnl);
+
+	return { byWeekday, bySymbol, byAsset, pnls, currency: account?.baseCurrency ?? 'USD' };
 };

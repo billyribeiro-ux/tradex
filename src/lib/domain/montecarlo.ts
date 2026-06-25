@@ -123,5 +123,53 @@ export function monteCarlo(
 	};
 }
 
+/** A single step of the Monte Carlo fan: percentile equity across simulations. */
+export interface FanBand {
+	step: number;
+	p5: number;
+	p25: number;
+	median: number;
+	p75: number;
+	p95: number;
+}
+
+/**
+ * Per-step percentile bands of the resampled equity path — the data behind a
+ * Monte Carlo "fan" chart. Pure; returns plain (de-scaled) currency units.
+ */
+export function monteCarloBands(
+	scaledPnls: readonly number[],
+	opts: { runs?: number; horizon?: number; seed?: number } = {}
+): FanBand[] {
+	const pnls = scaledPnls.map(fromScaled);
+	if (pnls.length === 0) return [];
+	const runs = opts.runs ?? 600;
+	const horizon = opts.horizon ?? pnls.length;
+	const rand = lcg(opts.seed ?? 12345);
+
+	// perStep[s] holds every simulation's equity at step s (s=0 is the origin).
+	const perStep: number[][] = Array.from({ length: horizon + 1 }, () => []);
+	for (let r = 0; r < runs; r++) {
+		let equity = 0;
+		perStep[0]!.push(0);
+		for (let s = 0; s < horizon; s++) {
+			equity += pnls[Math.floor(rand() * pnls.length)]!;
+			perStep[s + 1]!.push(equity);
+		}
+	}
+
+	return perStep.map((arr, step) => {
+		arr.sort((a, b) => a - b);
+		return {
+			step,
+			p5: percentile(arr, 5),
+			p25: percentile(arr, 25),
+			median: percentile(arr, 50),
+			p75: percentile(arr, 75),
+			p95: percentile(arr, 95)
+		};
+	});
+}
+
 /** Convenience: express a plain-number result back as a scaled value if needed. */
 export const toScaledResult = (v: number) => toScaled(v);

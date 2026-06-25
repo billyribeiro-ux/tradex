@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { getAccount, resolveAccount } from '$lib/server/services/accounts';
 import { listTrades } from '$lib/server/services/trades';
 import { propFirmConfig } from '$lib/server/db/schema';
-import { monteCarlo } from '$lib/domain/montecarlo';
+import { monteCarlo, monteCarloBands } from '$lib/domain/montecarlo';
 import { evaluatePropFirm, type PropFirmStatus } from '$lib/domain/propfirm';
 import { toScaled } from '$lib/money';
 import { PROP_FIRMS, DRAWDOWN_TYPES, type PropFirm, type DrawdownType } from '$lib/domain/enums';
@@ -15,6 +15,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	const blank = {
 		account: null,
 		mc: null,
+		fan: [] as ReturnType<typeof monteCarloBands>,
 		prop: null as PropFirmStatus | null,
 		config: null,
 		firms: PROP_FIRMS,
@@ -27,12 +28,14 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 
 	const trades = await listTrades(db, account.id, { status: 'closed', limit: 5000 });
 	const pnls = trades.map((t) => t.netPnl);
+	const horizon = Math.max(20, trades.length);
 	const mc = monteCarlo(pnls, {
 		runs: 1000,
-		horizon: Math.max(20, trades.length),
+		horizon,
 		ruinThreshold: account.startingBalance > 0 ? account.startingBalance : undefined,
 		seed: 12345
 	});
+	const fan = trades.length >= 2 ? monteCarloBands(pnls, { runs: 600, horizon, seed: 12345 }) : [];
 
 	const [config] = await db
 		.select()
@@ -50,6 +53,7 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	return {
 		account: { name: account.name, baseCurrency: account.baseCurrency },
 		mc,
+		fan,
 		prop,
 		config: config ?? null,
 		firms: PROP_FIRMS,

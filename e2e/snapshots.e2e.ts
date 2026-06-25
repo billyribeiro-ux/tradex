@@ -75,12 +75,19 @@ test('capture screenshots of every screen', async ({ page }) => {
 		await shot(page, name);
 	}
 
-	// A populated trade detail page: the log rows navigate on click (not anchors).
+	// A populated trade detail page. Rows navigate via window.location on click,
+	// which races under headless; instead pull candidate trade ids from the
+	// serialized page and open the first that resolves to a real detail page.
 	await page.goto('/trades');
-	const firstRow = page.locator('tbody tr').first();
-	if (await firstRow.count()) {
-		await firstRow.click();
-		await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 15_000 });
-		await shot(page, '22-trade-detail');
+	const html = await page.content();
+	const ids = [
+		...new Set(html.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g) ?? [])
+	];
+	for (const id of ids) {
+		const resp = await page.goto(`/trades/${id}`);
+		if (resp && resp.ok()) {
+			await shot(page, '22-trade-detail');
+			break;
+		}
 	}
 });
