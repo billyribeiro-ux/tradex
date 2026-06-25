@@ -31,37 +31,38 @@ export async function recordExecutions(
 	instrumentId: string,
 	execs: ExecutionInput[]
 ): Promise<{ inserted: number; duplicates: number }> {
-	let inserted = 0;
-	let duplicates = 0;
-	for (const e of execs) {
-		const dedupeHash = executionDedupeKey({
+	if (execs.length === 0) return { inserted: 0, duplicates: 0 };
+
+	const rows = execs.map((e) => ({
+		accountId,
+		instrumentId,
+		optionContractId: e.optionContractId ?? null,
+		side: e.side,
+		qty: e.qty,
+		price: e.price,
+		fee: e.fee ?? 0,
+		commission: e.commission ?? 0,
+		executedAt: e.executedAt,
+		brokerExecId: e.brokerExecId ?? null,
+		dedupeHash: executionDedupeKey({
 			instrumentKey: instrumentId,
 			side: e.side,
 			qty: e.qty,
 			price: e.price,
 			executedAt: e.executedAt,
 			brokerExecId: e.brokerExecId
-		});
-		const res = await db
-			.insert(execution)
-			.values({
-				accountId,
-				instrumentId,
-				optionContractId: e.optionContractId ?? null,
-				side: e.side,
-				qty: e.qty,
-				price: e.price,
-				fee: e.fee ?? 0,
-				commission: e.commission ?? 0,
-				executedAt: e.executedAt,
-				brokerExecId: e.brokerExecId ?? null,
-				dedupeHash
-			})
-			.onConflictDoNothing()
-			.returning({ id: execution.id });
-		if (res.length > 0) inserted++;
-		else duplicates++;
-	}
+		})
+	}));
+
+	// Single bulk insert; the (account, dedupeHash) unique index keeps this
+	// idempotent (re-imports skip duplicates) — `returning` counts what landed.
+	const res = await db
+		.insert(execution)
+		.values(rows)
+		.onConflictDoNothing()
+		.returning({ id: execution.id });
+	const inserted = res.length;
+	const duplicates = execs.length - inserted;
 	if (inserted > 0) await regroupInstrument(db, accountId, instrumentId);
 	return { inserted, duplicates };
 }

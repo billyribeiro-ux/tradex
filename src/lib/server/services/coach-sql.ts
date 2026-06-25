@@ -31,8 +31,11 @@ Currency values are already plain numbers in the account currency.`;
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+// Blocks writes, DDL, and unbounded/DoS constructs (PGlite runs in-process, so
+// a runaway query — generate_series, recursive CTE, repeat() — would block the
+// event loop). Any pg_* function is rejected outright.
 const FORBIDDEN =
-	/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|attach|copy|vacuum|into|merge|call|do|pg_sleep|pg_read|lo_import|dblink|pg_catalog|information_schema)\b/i;
+	/\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|attach|copy|vacuum|into|merge|call|do|recursive|generate_series|repeat|crosstab|setseed|random|lo_import|dblink|information_schema)\b|pg_/i;
 
 export interface QueryResult {
 	sql: string;
@@ -102,6 +105,8 @@ export async function runIsolatedQuery(
 	const pg = new PGlite();
 	try {
 		await pg.exec(`CREATE TABLE trades (${COLUMNS});`);
+		// Defense-in-depth: cap query runtime (the FORBIDDEN list is the primary guard).
+		await pg.exec(`SET statement_timeout = '3000ms';`);
 		const cols = [
 			'symbol',
 			'asset_class',

@@ -198,7 +198,14 @@ export function parseTimestamp(raw: string): number | null {
 	if (/^\d{10}$/.test(s)) return Number(s) * 1000;
 	if (/^\d{13}$/.test(s)) return Number(s);
 	// normalize "YYYY-MM-DD HH:MM:SS" -> ISO so Date treats it consistently
-	const iso = s.includes('T') ? s : s.replace(' ', 'T');
+	let iso = s.includes('T') ? s : s.replace(/\s+/, 'T');
+	// A date-time without a timezone designator is parsed as LOCAL time by JS,
+	// but this system treats every executedAt as UTC epoch ms. Append 'Z' when a
+	// time component is present and no offset is given. (Date-only strings are
+	// already interpreted as UTC midnight, so leave those untouched.)
+	const hasTime = /T\d{2}:/.test(iso);
+	const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(iso);
+	if (hasTime && !hasTz) iso = `${iso}Z`;
 	const t = Date.parse(iso);
 	if (!Number.isNaN(t)) return t;
 	const t2 = Date.parse(s);

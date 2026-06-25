@@ -62,7 +62,8 @@ export function evaluatePropFirm(
 	// equity curve for drawdown
 	let equity = startingBalance;
 	let peak = startingBalance;
-	let maxDrawdown = 0;
+	let trailingMaxDD = 0; // worst peak-to-trough
+	let staticMaxDD = 0; // worst start-to-trough (floored at 0)
 	let staticBreach = false;
 	let trailingBreach = false;
 	for (const t of ordered) {
@@ -70,15 +71,18 @@ export function evaluatePropFirm(
 		if (equity > peak) peak = equity;
 		const ddFromStart = startingBalance - equity;
 		const ddFromPeak = peak - equity;
-		if (ddFromPeak > maxDrawdown) maxDrawdown = ddFromPeak;
+		if (ddFromPeak > trailingMaxDD) trailingMaxDD = ddFromPeak;
+		if (ddFromStart > staticMaxDD) staticMaxDD = ddFromStart;
 		if (config.maxDrawdown != null) {
 			if (ddFromStart >= config.maxDrawdown) staticBreach = true;
 			if (ddFromPeak >= config.maxDrawdown) trailingBreach = true;
 		}
 	}
-	const ddBreached =
-		config.maxDrawdown != null &&
-		(config.drawdownType === 'trailing' ? trailingBreach : staticBreach);
+	const trailing = config.drawdownType === 'trailing';
+	// Report the drawdown that matches the breach definition in use, so value,
+	// met, and breached are all derived from the same measure.
+	const reportedMaxDD = trailing ? trailingMaxDD : staticMaxDD;
+	const ddBreached = config.maxDrawdown != null && (trailing ? trailingBreach : staticBreach);
 
 	const rules: RuleStatus[] = [];
 
@@ -107,7 +111,7 @@ export function evaluatePropFirm(
 			label: `Max drawdown (${config.drawdownType ?? 'static'})`,
 			met: !ddBreached,
 			breached: ddBreached,
-			value: maxDrawdown,
+			value: reportedMaxDD,
 			limit: config.maxDrawdown,
 			unit: 'money'
 		});

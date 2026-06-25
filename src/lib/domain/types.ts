@@ -93,7 +93,7 @@ export interface PerformanceMetrics {
 	/** longest consecutive winning / losing streaks. */
 	maxWinStreak: number;
 	maxLossStreak: number;
-	/** scaled — average hold time in ms (as a scaled integer of ms). */
+	/** average hold time in ms (plain integer, NOT scaled). */
 	avgHoldMs: number;
 }
 

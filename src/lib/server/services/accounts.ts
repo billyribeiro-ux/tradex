@@ -66,6 +66,12 @@ export async function resolveAccount(db: DB, userId: string, requestedId?: strin
 		const a = await getAccount(db, userId, requestedId);
 		if (a) return a;
 	}
+	// Honor the user's chosen default account before falling back to the oldest.
+	const settings = await getSettings(db, userId);
+	if (settings?.defaultAccountId) {
+		const def = await getAccount(db, userId, settings.defaultAccountId);
+		if (def) return def;
+	}
 	const accounts = await listAccounts(db, userId);
 	return accounts[0] ?? null;
 }

@@ -52,7 +52,7 @@
 </div>
 
 <div use:reveal={{ delay: 0.05 }}>
-	<CalendarHeatmap days={data.calendar} weeks={26} />
+	<CalendarHeatmap days={data.calendar} weeks={26} currency={data.currency} />
 </div>
 
 <div class="panel mt-3" use:reveal={{ delay: 0.1 }}>

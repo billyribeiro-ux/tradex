@@ -138,7 +138,7 @@
 	</div>
 
 	<div class="mt-3" use:reveal={{ delay: 0.25 }}>
-		<CalendarHeatmap days={data.dashboard.calendar} />
+		<CalendarHeatmap days={data.dashboard.calendar} {currency} />
 	</div>
 
 	<div class="panel mt-3" use:reveal={{ delay: 0.3 }}>

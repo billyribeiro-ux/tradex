@@ -35,14 +35,19 @@ describe('evaluatePropFirm', () => {
 			trades,
 			toScaled(10000)
 		);
-		expect(staticS.rules.find((r) => r.label.startsWith('Max drawdown'))!.breached).toBe(false); // 400 < 600
+		const staticRule = staticS.rules.find((r) => r.label.startsWith('Max drawdown'))!;
+		expect(staticRule.breached).toBe(false); // 400 < 600
+		// value must report the STATIC measure (ddFromStart 400), not trailing 900
+		expect(staticRule.value).toBe(toScaled(400));
 
 		const trailingS = evaluatePropFirm(
 			{ maxDrawdown: toScaled(600), drawdownType: 'trailing' },
 			trades,
 			toScaled(10000)
 		);
-		expect(trailingS.rules.find((r) => r.label.startsWith('Max drawdown'))!.breached).toBe(true); // 900 >= 600
+		const trailingRule = trailingS.rules.find((r) => r.label.startsWith('Max drawdown'))!;
+		expect(trailingRule.breached).toBe(true); // 900 >= 600
+		expect(trailingRule.value).toBe(toScaled(900));
 	});
 
 	it('flags minimum trading days not yet met (in-progress, not breached)', () => {

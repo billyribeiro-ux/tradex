@@ -59,6 +59,18 @@ describe('parseTimestamp', () => {
 		expect(parseTimestamp('2026-06-24T14:30:00Z')).toBe(Date.UTC(2026, 5, 24, 14, 30, 0));
 		expect(parseTimestamp('2026-06-24 14:30:00Z')).toBe(Date.UTC(2026, 5, 24, 14, 30, 0));
 	});
+	it('treats a naive datetime (no tz) as UTC, not server-local', () => {
+		// Broker CSVs often omit the offset; must NOT shift by the server's tz.
+		expect(parseTimestamp('2026-06-24T14:30:00')).toBe(Date.UTC(2026, 5, 24, 14, 30, 0));
+		expect(parseTimestamp('2026-06-24 14:30:00')).toBe(Date.UTC(2026, 5, 24, 14, 30, 0));
+		expect(parseTimestamp('2026-06-24 09:00')).toBe(Date.UTC(2026, 5, 24, 9, 0, 0));
+	});
+	it('respects an explicit offset when present', () => {
+		expect(parseTimestamp('2026-06-24T14:30:00-04:00')).toBe(Date.UTC(2026, 5, 24, 18, 30, 0));
+	});
+	it('parses a date-only string as UTC midnight', () => {
+		expect(parseTimestamp('2026-06-24')).toBe(Date.UTC(2026, 5, 24, 0, 0, 0));
+	});
 	it('parses epoch seconds and ms', () => {
 		expect(parseTimestamp('1700000000')).toBe(1700000000 * 1000);
 		expect(parseTimestamp('1700000000000')).toBe(1700000000000);

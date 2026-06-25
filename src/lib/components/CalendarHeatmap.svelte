@@ -5,8 +5,9 @@
 	let {
 		days,
 		weeks = 18,
-		endDate
-	}: { days: CalendarDay[]; weeks?: number; endDate?: string } = $props();
+		endDate,
+		currency = 'USD'
+	}: { days: CalendarDay[]; weeks?: number; endDate?: string; currency?: string } = $props();
 
 	const CELL = 15;
 	const GAP = 3;
@@ -106,7 +107,7 @@
 						class="mono font-semibold"
 						style="color:{tip.day.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
 					>
-						{formatMoney(tip.day.netPnl, 'USD', { signed: true })}
+						{formatMoney(tip.day.netPnl, currency, { signed: true })}
 					</div>
 					<div class="mono" style="color:var(--color-muted)">
 						{tip.day.trades} trade{tip.day.trades === 1 ? '' : 's'}
@@ -126,7 +127,7 @@
 		<span>Profit</span>
 		{#if days.length}
 			<span class="mono ml-auto" style="color:var(--color-faint)">
-				best {formatMoney(best, 'USD')} · worst {formatMoney(worst, 'USD')}
+				best {formatMoney(best, currency)} · worst {formatMoney(worst, currency)}
 			</span>
 		{/if}
 	</div>
