@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { formatMoney, formatRatio, fromScaled } from '$lib/money';
 	import { formatDateTime, formatDuration } from '$lib/format';
+	import TradePath from '$lib/components/TradePath.svelte';
+	import { reveal } from '$lib/motion';
 
 	let { data, form } = $props();
 	const t = $derived(data.detail.trade);
@@ -12,38 +14,37 @@
 
 <svelte:head><title>{inst.symbol} trade · TradeX</title></svelte:head>
 
-<header class="mb-5 flex items-start justify-between">
-	<div>
-		<a href="/trades" class="text-sm" style="color:var(--color-muted)">← Trades</a>
-		<h1 class="mt-1 flex items-center gap-3 text-2xl font-bold">
-			{inst.symbol}
-			<span class="text-sm font-medium capitalize" style="color:var(--color-muted)">
-				{t.direction} · {inst.assetClass}
-			</span>
-			<span
-				class="rounded-full px-2 py-0.5 text-xs"
-				style={t.status === 'open'
-					? 'background:rgba(108,140,255,0.15);color:var(--color-accent)'
-					: 'background:var(--color-surface-2);color:var(--color-muted)'}>{t.status}</span
+<div class="panel mb-3">
+	<div class="flex items-start justify-between p-5">
+		<div>
+			<a href="/trades" class="mono text-xs" style="color:var(--color-muted)">← Trades</a>
+			<h1 class="mt-1 flex items-center gap-3 text-2xl font-bold">
+				{inst.symbol}
+				<span class="mono text-sm font-medium capitalize" style="color:var(--color-muted)">
+					{t.direction} · {inst.assetClass}
+				</span>
+				<span class="chip" style={t.status === 'open' ? 'color:var(--color-accent)' : ''}>
+					{t.status}
+				</span>
+			</h1>
+		</div>
+		<div class="text-right">
+			<div class="label">Net P&L</div>
+			<div
+				class="kpi-val tnum"
+				style="color:{t.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
 			>
-		</h1>
-	</div>
-	<div class="text-right">
-		<div class="label">Net P&L</div>
-		<div
-			class="text-3xl font-bold"
-			style="color:{t.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
-		>
-			{t.status === 'open' ? '—' : formatMoney(t.netPnl, cur, { signed: true })}
+				{t.status === 'open' ? '—' : formatMoney(t.netPnl, cur, { signed: true })}
+			</div>
 		</div>
 	</div>
-</header>
+</div>
 
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
 	{#snippet cell(label: string, value: string)}
-		<div class="card p-3">
+		<div class="panel p-3">
 			<div class="label">{label}</div>
-			<div class="mt-1 font-semibold tabular-nums">{value}</div>
+			<div class="mono mt-1 font-semibold">{value}</div>
 		</div>
 	{/snippet}
 	{@render cell('Avg Entry', formatMoney(t.avgEntry, cur))}
@@ -75,42 +76,59 @@
 	{@render cell('Opened', formatDateTime(t.openedAt))}
 </div>
 
-<div class="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-	<div class="card overflow-hidden">
-		<h3 class="border-b p-4 font-semibold" style="border-color:var(--color-border)">
-			Executions ({data.detail.executions.length})
-		</h3>
-		<table class="w-full text-sm">
-			<thead class="text-left" style="color:var(--color-muted)">
+<div class="panel mt-3" use:reveal={{ delay: 0.05 }}>
+	<div class="panel-h">
+		<span class="panel-t">Trade Path</span>
+		<span class="mono text-xs" style="color:var(--color-faint)">price · entry/exit vs plan</span>
+	</div>
+	<div class="p-3">
+		<TradePath
+			executions={data.detail.executions}
+			plannedStop={t.plannedStop}
+			plannedTarget={t.plannedTarget}
+			avgEntry={t.avgEntry}
+			avgExit={t.avgExit}
+			currency={cur}
+		/>
+	</div>
+</div>
+
+<div class="mt-3 grid gap-3 lg:grid-cols-[1.3fr_1fr]">
+	<div class="panel">
+		<div class="panel-h">
+			<span class="panel-t">Executions · {data.detail.executions.length}</span>
+		</div>
+		<table class="dtable">
+			<thead>
 				<tr>
-					<th class="p-3 font-medium">Time</th>
-					<th class="p-3 font-medium">Side</th>
-					<th class="p-3 text-right font-medium">Qty</th>
-					<th class="p-3 text-right font-medium">Price</th>
-					<th class="p-3 text-right font-medium">Fees</th>
+					<th>Time</th>
+					<th>Side</th>
+					<th>Qty</th>
+					<th>Price</th>
+					<th>Fees</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each data.detail.executions as e (e.id)}
-					<tr class="border-t" style="border-color:var(--color-border)">
-						<td class="p-3" style="color:var(--color-muted)">{formatDateTime(e.executedAt)}</td>
+					<tr>
+						<td class="mono" style="color:var(--color-muted)">{formatDateTime(e.executedAt)}</td>
 						<td
-							class="p-3 font-medium uppercase"
+							class="mono font-semibold uppercase"
 							style="color:{e.side === 'buy' ? 'var(--color-up)' : 'var(--color-down)'}"
 							>{e.side}</td
 						>
-						<td class="p-3 text-right tabular-nums">{fromScaled(e.qty)}</td>
-						<td class="p-3 text-right tabular-nums">{formatMoney(e.price, cur)}</td>
-						<td class="p-3 text-right tabular-nums" style="color:var(--color-muted)">
-							{formatMoney(e.fee + e.commission, cur)}
-						</td>
+						<td class="mono">{fromScaled(e.qty)}</td>
+						<td class="mono">{formatMoney(e.price, cur)}</td>
+						<td class="mono" style="color:var(--color-muted)"
+							>{formatMoney(e.fee + e.commission, cur)}</td
+						>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
 
-	<form method="POST" action="?/annotate" use:enhance class="card p-5">
+	<form method="POST" action="?/annotate" use:enhance class="panel p-5">
 		<h3 class="mb-3 font-semibold">Journal & plan</h3>
 		<label class="label" for="notes">Notes</label>
 		<textarea id="notes" name="notes" rows="4" class="input mt-1" value={t.notes ?? ''}></textarea>

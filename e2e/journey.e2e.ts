@@ -6,6 +6,7 @@ import { test, expect } from '@playwright/test';
  * Runs against the real app + an in-process PGlite database (see playwright.config).
  */
 test('sign up, record a trade, and see it in the log', async ({ page }) => {
+	test.slow();
 	const stamp = Date.now();
 	const email = `e2e-${stamp}@tradex.dev`;
 	const symbol = `T${stamp % 100000}`;
@@ -14,15 +15,18 @@ test('sign up, record a trade, and see it in the log', async ({ page }) => {
 	await page.goto('/dashboard');
 	await expect(page).toHaveURL(/\/login/);
 
-	// sign up
+	// Sign up. The form is client-only, so a pre-hydration click submits the
+	// form natively (a harmless GET to /signup that creates no user). Retry
+	// fill+submit until a hydrated click runs signUp.email and lands us in the
+	// app — safe against duplicates because only the hydrated click registers.
 	await page.goto('/signup');
-	await page.fill('#name', 'E2E Tester');
-	await page.fill('#email', email);
-	await page.fill('input[type=password]', 'supersecret123');
-	await page.click('button[type=submit]');
-
-	// lands in the app
-	await expect(page).toHaveURL(/\/dashboard/, { timeout: 20000 });
+	await expect(async () => {
+		await page.fill('#name', 'E2E Tester');
+		await page.fill('#email', email);
+		await page.fill('input[type=password]', 'supersecret123');
+		await page.click('button[type=submit]');
+		await expect(page).toHaveURL(/\/dashboard/, { timeout: 6000 });
+	}).toPass({ timeout: 60000 });
 
 	// record a closed trade
 	await page.goto('/trades/new');
