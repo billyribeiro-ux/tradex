@@ -3,6 +3,7 @@
 	import { ASSET_CLASSES, ASSET_CLASS_LABELS } from '$lib/domain/enums';
 	import { formatMoney } from '$lib/money';
 	import { Wallet } from 'phosphor-svelte';
+	import { reveal } from '$lib/motion';
 
 	let { data, form } = $props();
 </script>
@@ -11,15 +12,15 @@
 
 <header class="mb-5">
 	<h1 class="text-2xl font-bold">Accounts</h1>
-	<p class="text-sm" style="color:var(--color-muted)">
-		Track multiple brokerage or prop-firm accounts — never gated.
+	<p class="mono mt-0.5 text-xs" style="color:var(--color-muted)">
+		Track multiple brokerage or prop-firm accounts — never gated
 	</p>
 </header>
 
-<div class="grid gap-4 lg:grid-cols-[1fr_22rem]">
+<div class="grid gap-3 lg:grid-cols-[1fr_22rem]">
 	<div class="flex flex-col gap-3">
-		{#each data.accounts as a (a.id)}
-			<div class="card flex items-center justify-between p-4">
+		{#each data.accounts as a, i (a.id)}
+			<div class="panel flex items-center justify-between p-4" use:reveal={{ delay: 0.05 * i }}>
 				<div class="flex items-center gap-3">
 					<div
 						class="grid h-10 w-10 place-items-center rounded-lg"
@@ -29,29 +30,21 @@
 					</div>
 					<div>
 						<div class="font-semibold">{a.name}</div>
-						<div class="text-xs" style="color:var(--color-muted)">
+						<div class="mono text-xs" style="color:var(--color-faint)">
 							{a.broker ?? 'No broker'} · {a.baseCurrency}
-							{#if a.isPropFirm}
-								· <span style="color:var(--color-accent)">prop firm</span>{/if}
+							{#if a.isPropFirm}· <span style="color:var(--color-accent)">prop firm</span>{/if}
 						</div>
 						<div class="mt-1 flex flex-wrap gap-1">
 							{#each a.assetClasses as ac (ac)}
-								<span
-									class="rounded px-1.5 py-0.5 text-[10px]"
-									style="background:var(--color-surface-2);color:var(--color-muted)"
-								>
-									{ASSET_CLASS_LABELS[ac]}
-								</span>
+								<span class="chip">{ASSET_CLASS_LABELS[ac]}</span>
 							{/each}
 						</div>
 					</div>
 				</div>
 				<div class="text-right">
 					<div class="label">Starting</div>
-					<div class="font-semibold tabular-nums">
-						{formatMoney(a.startingBalance, a.baseCurrency)}
-					</div>
-					<a href="/dashboard?account={a.id}" class="text-xs" style="color:var(--color-brand)"
+					<div class="mono font-semibold">{formatMoney(a.startingBalance, a.baseCurrency)}</div>
+					<a href="/dashboard?account={a.id}" class="mono text-xs" style="color:var(--color-brand)"
 						>Open →</a
 					>
 				</div>
@@ -59,7 +52,7 @@
 		{/each}
 	</div>
 
-	<form method="POST" action="?/create" use:enhance class="card h-fit p-5">
+	<form method="POST" action="?/create" use:enhance class="panel h-fit p-5">
 		<h3 class="mb-3 font-semibold">New account</h3>
 		<label class="label" for="name">Name</label>
 		<input

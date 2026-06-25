@@ -29,14 +29,13 @@
 	<h1 class="flex items-center gap-2 text-2xl font-bold">
 		<Sparkle size={22} style="color:var(--color-brand)" weight="fill" /> AI Coach
 	</h1>
-	<p class="text-sm" style="color:var(--color-muted)">
-		Grounded in your real stats — every insight is backed by your numbers, with small samples
-		flagged.
+	<p class="mono mt-0.5 text-xs" style="color:var(--color-muted)">
+		Grounded in your real stats — every insight backed by your numbers, small samples flagged
 	</p>
 </header>
 
 {#if !data.available}
-	<div class="card p-8 text-center">
+	<div class="panel p-8 text-center">
 		<h2 class="text-lg font-semibold">Connect your Claude key</h2>
 		<p class="mx-auto mt-2 max-w-md text-sm" style="color:var(--color-muted)">
 			The coach uses your own Anthropic API key (stored encrypted). Add it in Settings to enable
@@ -45,7 +44,7 @@
 		<a href="/settings" class="btn btn-primary mt-4">Add key in Settings</a>
 	</div>
 {:else}
-	<div class="card p-5">
+	<div class="panel p-5">
 		<form
 			method="POST"
 			action="?/ask"
@@ -83,31 +82,31 @@
 			<p class="mt-4 text-sm" style="color:var(--color-down)">{form.message}</p>
 		{/if}
 		{#if form?.answer}
-			<div class="mt-5 border-t pt-4" style="border-color:var(--color-border)">
-				<p class="mb-2 text-sm font-medium" style="color:var(--color-muted)">{form.question}</p>
+			<div class="mt-5 border-t pt-4" style="border-color:var(--color-hairline)">
+				<p class="mono mb-2 text-xs" style="color:var(--color-faint)">{form.question}</p>
 				<div class="text-sm whitespace-pre-wrap">{form.answer}</div>
 			</div>
 		{/if}
 		{#if qr}
-			<div class="mt-5 border-t pt-4" style="border-color:var(--color-border)">
-				<p class="mb-2 text-sm font-medium" style="color:var(--color-muted)">{qr.question}</p>
+			<div class="mt-5 border-t pt-4" style="border-color:var(--color-hairline)">
+				<p class="mono mb-2 text-xs" style="color:var(--color-faint)">{qr.question}</p>
 				<pre
-					class="overflow-x-auto rounded-lg p-3 text-xs"
-					style="background:var(--color-surface-2)"><code>{qr.sql}</code></pre>
-				<p class="mt-2 mb-2 text-xs" style="color:var(--color-muted)">{qr.rowCount} rows</p>
+					class="mono overflow-x-auto rounded-lg p-3 text-xs"
+					style="background:var(--color-bg-2)"><code>{qr.sql}</code></pre>
+				<p class="mono mt-2 mb-2 text-xs" style="color:var(--color-muted)">{qr.rowCount} rows</p>
 				{#if qr.rows.length > 0}
-					<div class="overflow-x-auto rounded-lg" style="background:var(--color-surface-2)">
-						<table class="w-full text-xs">
-							<thead class="text-left" style="color:var(--color-muted)">
+					<div class="panel overflow-x-auto">
+						<table class="dtable">
+							<thead>
 								<tr>
-									{#each qr.columns as c (c)}<th class="p-2 font-medium">{c}</th>{/each}
+									{#each qr.columns as c (c)}<th>{c}</th>{/each}
 								</tr>
 							</thead>
 							<tbody>
 								{#each qr.rows as row, i (i)}
-									<tr class="border-t" style="border-color:var(--color-border)">
+									<tr>
 										{#each qr.columns as c (c)}
-											<td class="p-2 tabular-nums">{String(row[c] ?? '—')}</td>
+											<td class="mono">{String(row[c] ?? '—')}</td>
 										{/each}
 									</tr>
 								{/each}

@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { formatMoney, formatRatio, fromScaled } from '$lib/money';
 	import { BookOpen } from 'phosphor-svelte';
+	import { reveal } from '$lib/motion';
 
 	let { data, form } = $props();
 	const cur = $derived(data.currency);
@@ -11,21 +12,21 @@
 
 <header class="mb-5">
 	<h1 class="text-2xl font-bold">Playbooks</h1>
-	<p class="text-sm" style="color:var(--color-muted)">
-		Define your strategies and rules, tag trades to them, and see which actually make money.
+	<p class="mono mt-0.5 text-xs" style="color:var(--color-muted)">
+		Define strategies · tag trades · see which actually make money
 	</p>
 </header>
 
-<div class="grid gap-4 lg:grid-cols-[1fr_22rem]">
+<div class="grid gap-3 lg:grid-cols-[1fr_22rem]">
 	<div class="flex flex-col gap-3">
 		{#if data.playbooks.length === 0}
-			<div class="card p-8 text-center" style="color:var(--color-muted)">
+			<div class="panel p-8 text-center" style="color:var(--color-muted)">
 				No playbooks yet. Create your first strategy on the right.
 			</div>
 		{/if}
-		{#each data.playbooks as p (p.id)}
+		{#each data.playbooks as p, i (p.id)}
 			{@const perf = data.perf[p.id]}
-			<div class="card p-4">
+			<div class="panel p-4" use:reveal={{ delay: 0.05 * i }}>
 				<div class="flex items-start justify-between">
 					<div class="flex items-center gap-3">
 						<div
@@ -44,47 +45,48 @@
 					{#if perf}
 						<div class="text-right">
 							<div
-								class="text-lg font-bold tabular-nums"
+								class="kpi-val tnum text-lg"
 								style="color:{perf.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
 							>
 								{formatMoney(perf.netPnl, cur, { signed: true })}
 							</div>
-							<div class="text-xs" style="color:var(--color-muted)">
+							<div class="mono text-xs" style="color:var(--color-faint)">
 								{(fromScaled(perf.winRate) * 100).toFixed(0)}% win · PF {formatRatio(
 									perf.profitFactor
-								)} ·
-								{perf.tradeCount} trades
+								)} · {perf.tradeCount} trades
 							</div>
 						</div>
 					{:else}
-						<div class="text-xs" style="color:var(--color-muted)">no trades yet</div>
+						<span class="chip">no trades yet</span>
 					{/if}
 				</div>
+
+				{#if perf}
+					<div
+						class="mt-3 h-1.5 overflow-hidden rounded-full"
+						style="background:var(--color-surface-2)"
+					>
+						<div
+							class="h-full rounded-full"
+							style="width:{fromScaled(perf.winRate) * 100}%;background:var(--color-brand)"
+						></div>
+					</div>
+				{/if}
+
 				{#if p.rules?.entryCriteria?.length || p.rules?.maxRiskPct || p.rules?.minRR}
-					<div class="mt-3 flex flex-wrap gap-1 text-[11px]">
+					<div class="mt-3 flex flex-wrap gap-1">
 						{#each p.rules?.entryCriteria ?? [] as c (c)}
-							<span
-								class="rounded px-1.5 py-0.5"
-								style="background:var(--color-surface-2);color:var(--color-muted)">{c}</span
-							>
+							<span class="chip">{c}</span>
 						{/each}
-						{#if p.rules?.maxRiskPct}
-							<span class="rounded px-1.5 py-0.5" style="background:var(--color-surface-2)"
-								>max risk {p.rules.maxRiskPct}%</span
-							>
-						{/if}
-						{#if p.rules?.minRR}
-							<span class="rounded px-1.5 py-0.5" style="background:var(--color-surface-2)"
-								>min {p.rules.minRR}R</span
-							>
-						{/if}
+						{#if p.rules?.maxRiskPct}<span class="chip">max risk {p.rules.maxRiskPct}%</span>{/if}
+						{#if p.rules?.minRR}<span class="chip">min {p.rules.minRR}R</span>{/if}
 					</div>
 				{/if}
 			</div>
 		{/each}
 	</div>
 
-	<form method="POST" action="?/create" use:enhance class="card h-fit p-5">
+	<form method="POST" action="?/create" use:enhance class="panel h-fit p-5">
 		<h3 class="mb-3 font-semibold">New playbook</h3>
 		<label class="label" for="name">Name</label>
 		<input

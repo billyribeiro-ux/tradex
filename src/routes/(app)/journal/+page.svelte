@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { formatDate } from '$lib/format';
 	import { NotePencil, Trash } from 'phosphor-svelte';
+	import { reveal } from '$lib/motion';
 
 	let { data, form } = $props();
 </script>
@@ -10,13 +11,13 @@
 
 <header class="mb-5">
 	<h1 class="text-2xl font-bold">Journal</h1>
-	<p class="text-sm" style="color:var(--color-muted)">
-		Daily reviews and free-form notes — the habit that compounds.
+	<p class="mono mt-0.5 text-xs" style="color:var(--color-muted)">
+		Daily reviews — the habit that compounds
 	</p>
 </header>
 
-<div class="grid gap-4 lg:grid-cols-[22rem_1fr]">
-	<form method="POST" action="?/create" use:enhance class="card h-fit p-5">
+<div class="grid gap-3 lg:grid-cols-[22rem_1fr]">
+	<form method="POST" action="?/create" use:enhance class="panel h-fit p-5">
 		<h3 class="mb-3 flex items-center gap-2 font-semibold">
 			<NotePencil size={18} style="color:var(--color-brand)" /> New entry
 		</h3>
@@ -43,15 +44,15 @@
 
 	<div class="flex flex-col gap-3">
 		{#if data.entries.length === 0}
-			<div class="card p-10 text-center" style="color:var(--color-muted)">
+			<div class="panel p-10 text-center" style="color:var(--color-muted)">
 				No entries yet. Write your first review on the left.
 			</div>
 		{/if}
-		{#each data.entries as e (e.id)}
-			<div class="card p-4">
+		{#each data.entries as e, i (e.id)}
+			<div class="panel p-4" use:reveal={{ delay: 0.04 * i }}>
 				<div class="flex items-start justify-between">
 					<div>
-						<div class="text-xs" style="color:var(--color-muted)">
+						<div class="mono text-xs" style="color:var(--color-faint)">
 							{formatDate(Date.parse(e.date))}
 						</div>
 						{#if e.title}<div class="font-semibold">{e.title}</div>{/if}

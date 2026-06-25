@@ -1,6 +1,8 @@
 <script lang="ts">
 	import CalendarHeatmap from '$lib/components/CalendarHeatmap.svelte';
-	import { formatMoney } from '$lib/money';
+	import KpiCard from '$lib/components/KpiCard.svelte';
+	import { reveal } from '$lib/motion';
+	import { fromScaled, toScaled, formatMoney } from '$lib/money';
 
 	let { data } = $props();
 
@@ -16,30 +18,63 @@
 		}
 		return [...m.entries()].sort((a, b) => b[0].localeCompare(a[0]));
 	});
+
+	const total = $derived(data.calendar.reduce((s, d) => s + d.netPnl, 0));
+	const trades = $derived(data.calendar.reduce((s, d) => s + d.trades, 0));
+	const greenDays = $derived(data.calendar.filter((d) => d.netPnl > 0).length);
+	const activeDays = $derived(data.calendar.filter((d) => d.trades > 0).length);
+	const money = (n: number) => formatMoney(toScaled(n), data.currency, { signed: true });
 </script>
 
 <svelte:head><title>Calendar · TradeX</title></svelte:head>
 
 <header class="mb-5">
 	<h1 class="text-2xl font-bold">Calendar</h1>
-	<p class="text-sm" style="color:var(--color-muted)">Daily realized P&L.</p>
+	<p class="mono mt-0.5 text-xs" style="color:var(--color-muted)">Daily realized P&L</p>
 </header>
 
-<CalendarHeatmap days={data.calendar} weeks={26} />
+<div class="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+	<KpiCard
+		label="Total P&L"
+		value={fromScaled(total)}
+		format={money}
+		tone={total >= 0 ? 'up' : 'down'}
+	/>
+	<KpiCard label="Trades" value={trades} format={(n) => n.toFixed(0)} />
+	<KpiCard label="Active Days" value={activeDays} format={(n) => n.toFixed(0)} />
+	<KpiCard
+		label="Green Days"
+		value={activeDays ? (greenDays / activeDays) * 100 : 0}
+		format={(n) => `${n.toFixed(0)}%`}
+		tone="up"
+		sub="{greenDays}/{activeDays} profitable"
+	/>
+</div>
 
-<div class="mt-4 card overflow-hidden">
-	<h3 class="border-b p-4 font-semibold" style="border-color:var(--color-border)">Monthly P&L</h3>
+<div use:reveal={{ delay: 0.05 }}>
+	<CalendarHeatmap days={data.calendar} weeks={26} />
+</div>
+
+<div class="panel mt-3" use:reveal={{ delay: 0.1 }}>
+	<div class="panel-h"><span class="panel-t">Monthly P&L</span></div>
 	{#if months.length === 0}
 		<p class="p-4 text-sm" style="color:var(--color-muted)">No closed trades yet.</p>
 	{:else}
-		<table class="w-full text-sm">
+		<table class="dtable">
+			<thead>
+				<tr>
+					<th>Month</th>
+					<th>Trades</th>
+					<th>Net P&L</th>
+				</tr>
+			</thead>
 			<tbody>
 				{#each months as [month, v] (month)}
-					<tr class="border-t" style="border-color:var(--color-border)">
-						<td class="p-3 font-medium">{month}</td>
-						<td class="p-3 text-right" style="color:var(--color-muted)">{v.trades} trades</td>
+					<tr>
+						<td class="mono font-semibold">{month}</td>
+						<td class="mono" style="color:var(--color-muted)">{v.trades}</td>
 						<td
-							class="p-3 text-right font-semibold tabular-nums"
+							class="mono font-semibold"
 							style="color:{v.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
 						>
 							{formatMoney(v.netPnl, data.currency, { signed: true })}
