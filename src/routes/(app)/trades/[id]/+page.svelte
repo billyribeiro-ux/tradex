@@ -4,6 +4,7 @@
 	import { formatDateTime, formatDuration } from '$lib/format';
 	import TradePath from '$lib/components/TradePath.svelte';
 	import { reveal } from '$lib/motion';
+	import { Trash } from 'phosphor-svelte';
 
 	let { data, form } = $props();
 	const t = $derived(data.detail.trade);
@@ -28,14 +29,29 @@
 				</span>
 			</h1>
 		</div>
-		<div class="text-right">
-			<div class="label">Net P&L</div>
-			<div
-				class="kpi-val tnum"
-				style="color:{t.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
-			>
-				{t.status === 'open' ? '—' : formatMoney(t.netPnl, cur, { signed: true })}
+		<div class="flex flex-col items-end gap-2">
+			<div class="text-right">
+				<div class="label">Net P&L</div>
+				<div
+					class="kpi-val tnum"
+					style="color:{t.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
+				>
+					{t.status === 'open' ? '—' : formatMoney(t.netPnl, cur, { signed: true })}
+				</div>
 			</div>
+			<form method="POST" action="?/delete" use:enhance>
+				<button
+					type="submit"
+					class="btn btn-ghost text-xs"
+					style="color:var(--color-down)"
+					onclick={(e) => {
+						if (!confirm('Delete this trade and its executions? This cannot be undone.'))
+							e.preventDefault();
+					}}
+				>
+					<Trash size={14} /> Delete trade
+				</button>
+			</form>
 		</div>
 	</div>
 </div>

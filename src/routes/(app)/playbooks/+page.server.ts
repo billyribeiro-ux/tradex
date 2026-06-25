@@ -1,6 +1,11 @@
 import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { listPlaybooks, createPlaybook, playbookPerformance } from '$lib/server/services/playbooks';
+import {
+	listPlaybooks,
+	createPlaybook,
+	deletePlaybook,
+	playbookPerformance
+} from '$lib/server/services/playbooks';
 import type { Actions, PageServerLoad } from './$types';
 
 type PerfRow = { netPnl: number; winRate: number; tradeCount: number; profitFactor: number };
@@ -50,5 +55,15 @@ export const actions: Actions = {
 		});
 		if (!created) return fail(400, { message: 'A playbook with that name already exists' });
 		return { created: true };
+	},
+
+	delete: async ({ request, locals }) => {
+		if (!locals.user) return fail(401);
+		const fd = await request.formData();
+		const id = ((fd.get('id') as string) ?? '').trim();
+		if (!id) return fail(400);
+		const ok = await deletePlaybook(db, locals.user.id, id);
+		if (!ok) return fail(404, { message: 'Playbook not found' });
+		return { deleted: true };
 	}
 };

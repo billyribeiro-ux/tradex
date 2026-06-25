@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { ASSET_CLASSES, ASSET_CLASS_LABELS } from '$lib/domain/enums';
 	import { formatMoney } from '$lib/money';
-	import { Wallet } from 'phosphor-svelte';
+	import { Wallet, Trash } from 'phosphor-svelte';
 	import { reveal } from '$lib/motion';
 
 	let { data, form } = $props();
@@ -20,33 +20,120 @@
 <div class="grid gap-3 lg:grid-cols-[1fr_22rem]">
 	<div class="flex flex-col gap-3">
 		{#each data.accounts as a, i (a.id)}
-			<div class="panel flex items-center justify-between p-4" use:reveal={{ delay: 0.05 * i }}>
-				<div class="flex items-center gap-3">
-					<div
-						class="grid h-10 w-10 place-items-center rounded-lg"
-						style="background:var(--color-surface-2)"
-					>
-						<Wallet size={20} style="color:var(--color-brand)" />
+			<div class="panel p-4" use:reveal={{ delay: 0.05 * i }}>
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-3">
+						<div
+							class="grid h-10 w-10 place-items-center rounded-lg"
+							style="background:var(--color-surface-2)"
+						>
+							<Wallet size={20} style="color:var(--color-brand)" />
+						</div>
+						<div>
+							<div class="font-semibold">{a.name}</div>
+							<div class="mono text-xs" style="color:var(--color-faint)">
+								{a.broker ?? 'No broker'} · {a.baseCurrency}
+								{#if a.isPropFirm}· <span style="color:var(--color-accent)">prop firm</span>{/if}
+							</div>
+							<div class="mt-1 flex flex-wrap gap-1">
+								{#each a.assetClasses as ac (ac)}
+									<span class="chip">{ASSET_CLASS_LABELS[ac]}</span>
+								{/each}
+							</div>
+						</div>
 					</div>
-					<div>
-						<div class="font-semibold">{a.name}</div>
-						<div class="mono text-xs" style="color:var(--color-faint)">
-							{a.broker ?? 'No broker'} · {a.baseCurrency}
-							{#if a.isPropFirm}· <span style="color:var(--color-accent)">prop firm</span>{/if}
-						</div>
-						<div class="mt-1 flex flex-wrap gap-1">
-							{#each a.assetClasses as ac (ac)}
-								<span class="chip">{ASSET_CLASS_LABELS[ac]}</span>
-							{/each}
-						</div>
+					<div class="text-right">
+						<div class="label">Starting</div>
+						<div class="mono font-semibold">{formatMoney(a.startingBalance, a.baseCurrency)}</div>
+						<a
+							href="/dashboard?account={a.id}"
+							class="mono text-xs"
+							style="color:var(--color-brand)">Open →</a
+						>
 					</div>
 				</div>
-				<div class="text-right">
-					<div class="label">Starting</div>
-					<div class="mono font-semibold">{formatMoney(a.startingBalance, a.baseCurrency)}</div>
-					<a href="/dashboard?account={a.id}" class="mono text-xs" style="color:var(--color-brand)"
-						>Open →</a
-					>
+
+				<div
+					class="mt-3 flex items-start gap-3 border-t pt-3"
+					style="border-color:var(--color-hairline)"
+				>
+					<details class="flex-1">
+						<summary class="mono cursor-pointer text-xs" style="color:var(--color-brand)"
+							>Edit</summary
+						>
+						<form
+							method="POST"
+							action="?/update"
+							use:enhance
+							class="mt-2 grid gap-2 sm:grid-cols-2"
+						>
+							<input type="hidden" name="id" value={a.id} />
+							<label class="flex flex-col gap-1"
+								><span class="label">Name</span><input
+									name="name"
+									class="input"
+									value={a.name}
+								/></label
+							>
+							<label class="flex flex-col gap-1"
+								><span class="label">Broker</span><input
+									name="broker"
+									class="input"
+									value={a.broker ?? ''}
+								/></label
+							>
+							<label class="flex flex-col gap-1"
+								><span class="label">Currency</span><input
+									name="baseCurrency"
+									class="input"
+									value={a.baseCurrency}
+								/></label
+							>
+							<label class="flex flex-col gap-1"
+								><span class="label">Starting balance</span><input
+									name="startingBalance"
+									class="input"
+									inputmode="decimal"
+									value={a.startingBalance / 1e8}
+								/></label
+							>
+							<div class="sm:col-span-2">
+								<div class="label mb-1">Asset classes</div>
+								<div class="grid grid-cols-2 gap-1">
+									{#each ASSET_CLASSES as ac (ac)}
+										<label class="flex items-center gap-2 text-sm">
+											<input
+												type="checkbox"
+												name="assetClasses"
+												value={ac}
+												checked={a.assetClasses.includes(ac)}
+											/>
+											{ASSET_CLASS_LABELS[ac]}
+										</label>
+									{/each}
+								</div>
+							</div>
+							<label class="flex items-center gap-2 text-sm sm:col-span-2">
+								<input type="checkbox" name="isPropFirm" checked={a.isPropFirm} /> Prop-firm account
+							</label>
+							<button type="submit" class="btn btn-primary w-fit sm:col-span-2">Save changes</button
+							>
+						</form>
+					</details>
+					<form method="POST" action="?/delete" use:enhance>
+						<input type="hidden" name="id" value={a.id} />
+						<button
+							type="submit"
+							class="btn btn-ghost text-xs"
+							style="color:var(--color-down)"
+							onclick={(e) => {
+								if (!confirm(`Delete "${a.name}" and ALL its trades? This cannot be undone.`))
+									e.preventDefault();
+							}}
+						>
+							<Trash size={14} /> Delete
+						</button>
+					</form>
 				</div>
 			</div>
 		{/each}

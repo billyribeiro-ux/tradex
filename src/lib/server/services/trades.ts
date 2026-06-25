@@ -1,4 +1,4 @@
-import { and, eq, desc, inArray, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, ne, desc, inArray, gte, lte, sql } from 'drizzle-orm';
 import type { DB } from '$lib/server/db';
 import { execution, instrument, trade, tradeExecution } from '$lib/server/db/schema';
 import { groupExecutions } from '$lib/domain/grouping';
@@ -359,4 +359,44 @@ export async function getTradeDetail(db: DB, accountId: string, tradeId: string)
 		executions: fills.map((f) => f.execution),
 		categorization
 	};
+}
+
+/**
+ * Delete a trade (ownership-checked) along with the executions it solely owns,
+ * then re-derive remaining trades for the instrument. Executions shared with
+ * another trade (e.g. a reversal fill) are preserved so the other trade stays
+ * intact. Returns false if the trade isn't found for this account.
+ */
+export async function deleteTrade(db: DB, accountId: string, tradeId: string): Promise<boolean> {
+	const [t] = await db
+		.select({ id: trade.id, instrumentId: trade.instrumentId })
+		.from(trade)
+		.where(and(eq(trade.id, tradeId), eq(trade.accountId, accountId)))
+		.limit(1);
+	if (!t) return false;
+
+	const links = await db
+		.select({ executionId: tradeExecution.executionId })
+		.from(tradeExecution)
+		.where(eq(tradeExecution.tradeId, tradeId));
+	const execIds = links.map((l) => l.executionId);
+
+	let soleIds = execIds;
+	if (execIds.length > 0) {
+		const shared = await db
+			.select({ executionId: tradeExecution.executionId })
+			.from(tradeExecution)
+			.where(
+				and(inArray(tradeExecution.executionId, execIds), ne(tradeExecution.tradeId, tradeId))
+			);
+		const sharedSet = new Set(shared.map((s) => s.executionId));
+		soleIds = execIds.filter((id) => !sharedSet.has(id));
+	}
+
+	// Delete the trade (cascades tradeExecution links + tradeTag), then the
+	// now-orphaned executions, so a regroup can't resurrect the trade.
+	await db.delete(trade).where(eq(trade.id, tradeId));
+	if (soleIds.length > 0) await db.delete(execution).where(inArray(execution.id, soleIds));
+	await regroupInstrument(db, accountId, t.instrumentId);
+	return true;
 }

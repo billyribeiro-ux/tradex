@@ -1,6 +1,6 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getTradeDetail, applyTradeAnnotations } from '$lib/server/services/trades';
+import { getTradeDetail, applyTradeAnnotations, deleteTrade } from '$lib/server/services/trades';
 import { applyCategorization } from '$lib/server/services/categorization';
 import { getAccount, resolveAccount } from '$lib/server/services/accounts';
 import { listPlaybooks } from '$lib/server/services/playbooks';
@@ -51,5 +51,14 @@ export const actions: Actions = {
 				.filter(Boolean)
 		});
 		return { saved: true };
+	},
+
+	delete: async ({ params, locals, cookies }) => {
+		if (!locals.user) return fail(401);
+		const account = await resolveAccount(db, locals.user.id, cookies.get('account'));
+		if (!account) return fail(400);
+		const ok = await deleteTrade(db, account.id, params.id);
+		if (!ok) return fail(404);
+		redirect(303, '/trades');
 	}
 };

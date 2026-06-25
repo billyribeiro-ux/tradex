@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatMoney, formatRatio, fromScaled } from '$lib/money';
-	import { BookOpen } from 'phosphor-svelte';
+	import { BookOpen, Trash } from 'phosphor-svelte';
 	import { reveal } from '$lib/motion';
 
 	let { data, form } = $props();
@@ -82,6 +82,23 @@
 						{#if p.rules?.minRR}<span class="chip">min {p.rules.minRR}R</span>{/if}
 					</div>
 				{/if}
+
+				<div class="mt-3 flex justify-end border-t pt-2" style="border-color:var(--color-hairline)">
+					<form method="POST" action="?/delete" use:enhance>
+						<input type="hidden" name="id" value={p.id} />
+						<button
+							type="submit"
+							class="btn btn-ghost text-xs"
+							style="color:var(--color-down)"
+							onclick={(e) => {
+								if (!confirm(`Delete playbook "${p.name}"? Trades keep their history.`))
+									e.preventDefault();
+							}}
+						>
+							<Trash size={14} /> Delete
+						</button>
+					</form>
+				</div>
 			</div>
 		{/each}
 	</div>

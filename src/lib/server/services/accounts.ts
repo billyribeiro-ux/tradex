@@ -104,3 +104,46 @@ export async function createAccount(
 		.returning();
 	return created!;
 }
+
+/** Update an owned account's editable fields. Returns false if not owned. */
+export async function updateAccount(
+	db: DB,
+	userId: string,
+	accountId: string,
+	input: Partial<{
+		name: string;
+		broker: string | null;
+		assetClasses: AssetClass[];
+		baseCurrency: string;
+		startingBalance: number;
+		isPropFirm: boolean;
+	}>
+): Promise<boolean> {
+	const set: Record<string, unknown> = {};
+	for (const k of [
+		'name',
+		'broker',
+		'assetClasses',
+		'baseCurrency',
+		'startingBalance',
+		'isPropFirm'
+	] as const) {
+		if (input[k] !== undefined) set[k] = input[k];
+	}
+	if (Object.keys(set).length === 0) return false;
+	const res = await db
+		.update(tradingAccount)
+		.set(set)
+		.where(and(eq(tradingAccount.id, accountId), eq(tradingAccount.userId, userId)))
+		.returning({ id: tradingAccount.id });
+	return res.length > 0;
+}
+
+/** Delete an owned account; cascades its trades, executions, configs, journal. */
+export async function deleteAccount(db: DB, userId: string, accountId: string): Promise<boolean> {
+	const res = await db
+		.delete(tradingAccount)
+		.where(and(eq(tradingAccount.id, accountId), eq(tradingAccount.userId, userId)))
+		.returning({ id: tradingAccount.id });
+	return res.length > 0;
+}

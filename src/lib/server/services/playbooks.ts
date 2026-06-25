@@ -26,6 +26,35 @@ export async function createPlaybook(
 	return created ?? null;
 }
 
+/** Update an owned playbook. Returns false if not owned. */
+export async function updatePlaybook(
+	db: DB,
+	userId: string,
+	id: string,
+	input: Partial<{ name: string; description: string | null; rules: PlaybookRules }>
+): Promise<boolean> {
+	const set: Record<string, unknown> = {};
+	if (input.name !== undefined) set.name = input.name;
+	if (input.description !== undefined) set.description = input.description;
+	if (input.rules !== undefined) set.rules = input.rules;
+	if (Object.keys(set).length === 0) return false;
+	const res = await db
+		.update(playbook)
+		.set(set)
+		.where(and(eq(playbook.id, id), eq(playbook.userId, userId)))
+		.returning({ id: playbook.id });
+	return res.length > 0;
+}
+
+/** Delete an owned playbook; trades referencing it have playbookId set null. */
+export async function deletePlaybook(db: DB, userId: string, id: string): Promise<boolean> {
+	const res = await db
+		.delete(playbook)
+		.where(and(eq(playbook.id, id), eq(playbook.userId, userId)))
+		.returning({ id: playbook.id });
+	return res.length > 0;
+}
+
 export interface PlaybookPerformance {
 	playbookId: string;
 	metrics: PerformanceMetrics;
