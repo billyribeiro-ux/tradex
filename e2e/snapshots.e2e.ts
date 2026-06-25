@@ -38,14 +38,17 @@ const APP_PAGES: [path: string, name: string][] = [
 ];
 
 async function shot(page: import('@playwright/test').Page, name: string) {
-	await page.waitForLoadState('networkidle').catch(() => {});
-	// Settle fonts, D3 draw-in animations, and the WebGL hero before capture.
-	await page.waitForTimeout(900);
+	// Cap the idle wait: the Vite dev server streams many module requests per
+	// heavy page, so networkidle can be slow — bound it, then settle for D3
+	// draw-in animations and the WebGL hero.
+	await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
+	await page.waitForTimeout(700);
 	await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
 }
 
 test('capture screenshots of every screen', async ({ page }) => {
-	test.slow();
+	// Capturing ~16 full-page screens (plus signup + seeding) is inherently long.
+	test.setTimeout(240_000);
 	await mkdir(OUT, { recursive: true });
 
 	// Public, unauthenticated screens.
