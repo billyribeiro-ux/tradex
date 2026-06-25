@@ -60,8 +60,12 @@
 			</thead>
 			<tbody>
 				{#each data.trades as t (t.id)}
-					<tr class="cursor-pointer" onclick={() => (window.location.href = `/trades/${t.id}`)}>
-						<td class="font-semibold">{t.symbol}</td>
+					<tr>
+						<td class="font-semibold">
+							<a href="/trades/{t.id}" class="hover:underline" style="color:var(--color-text)"
+								>{t.symbol}</a
+							>
+						</td>
 						<td class="capitalize" style="color:var(--color-muted)">{t.direction}</td>
 						<td>
 							<span class="chip" style={t.status === 'open' ? 'color:var(--color-accent)' : ''}>

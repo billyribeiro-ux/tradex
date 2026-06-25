@@ -8,8 +8,9 @@
 		Sparkle,
 		ArrowRight
 	} from 'phosphor-svelte';
-	import Hero3D from '$lib/components/three/Hero3D.svelte';
 	import { reveal } from '$lib/motion';
+	// Lazy-loaded so three.js/threlte isn't shipped to every landing visitor.
+	const hero3d = import('$lib/components/three/Hero3D.svelte');
 
 	const features = [
 		{
@@ -93,7 +94,9 @@
 		<!-- Hero with live 3D data-surface backdrop -->
 		<section class="relative overflow-hidden">
 			<div class="absolute inset-0" style="height:760px">
-				<Hero3D />
+				{#await hero3d then { default: Hero3D }}
+					<Hero3D />
+				{/await}
 				<!-- legibility scrim -->
 				<div
 					class="absolute inset-0"
