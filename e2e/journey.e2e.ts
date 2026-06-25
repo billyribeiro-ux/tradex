@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { signUp, createTrade } from './helpers';
 
 /**
  * Happy-path smoke: an unauthenticated visitor is redirected to login, can sign
@@ -15,35 +16,17 @@ test('sign up, record a trade, and see it in the log', async ({ page }) => {
 	await page.goto('/dashboard');
 	await expect(page).toHaveURL(/\/login/);
 
-	// Sign up. The form is client-only, so a pre-hydration click submits the
-	// form natively (a harmless GET to /signup that creates no user). Retry
-	// fill+submit until a hydrated click runs signUp.email and lands us in the
-	// app — safe against duplicates because only the hydrated click registers.
-	await page.goto('/signup');
-	await expect(async () => {
-		await page.fill('#name', 'E2E Tester');
-		await page.fill('#email', email);
-		await page.fill('input[type=password]', 'supersecret123');
-		await page.click('button[type=submit]');
-		await expect(page).toHaveURL(/\/dashboard/, { timeout: 6000 });
-	}).toPass({ timeout: 60000 });
+	await signUp(page, email);
 
-	// record a closed trade
-	await page.goto('/trades/new');
-	await page.fill('input[name=symbol]', symbol);
-	await page.selectOption('select[name=assetClass]', 'stock');
-	await page.selectOption('select[name=direction]', 'long');
-	await page.fill('input[name=qty]', '100');
-	await page.fill('input[name=entryPrice]', '150');
-	await page.fill('input[name=entryAt]', '2026-06-01T14:30');
-	await page.fill('input[name=exitPrice]', '155');
-	await page.fill('input[name=exitAt]', '2026-06-01T15:30');
-	await page.click('button[type=submit]');
-
-	// Wait for the create+redirect to land on the trade detail page before
-	// navigating away — `use:enhance` submits via fetch, and an early goto would
-	// abort that in-flight POST so the trade would never be written.
-	await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 20000 });
+	// record a closed trade (helper waits for the create+redirect to land)
+	await createTrade(page, {
+		symbol,
+		qty: '100',
+		entryPrice: '150',
+		entryAt: '2026-06-01T14:30',
+		exitPrice: '155',
+		exitAt: '2026-06-01T15:30'
+	});
 
 	// the new symbol shows up in the trade log
 	await page.goto('/trades');

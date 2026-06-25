@@ -59,7 +59,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: E2E (Playwright)
-        run: pnpm exec playwright test e2e/journey.e2e.ts
+        run: pnpm exec playwright test e2e/journey.e2e.ts e2e/app.e2e.ts
 
   snapshots:
     runs-on: ubuntu-latest
@@ -67,6 +67,9 @@ jobs:
       DATABASE_URL: pglite://.pgdata
       BETTER_AUTH_SECRET: snapshots-ci-secret-change-me
       SEED_DEMO: '1'
+      # Capture flow needs the SEED_DEMO endpoint, which is only reachable under
+      # `vite dev` (see playwright.config.ts) — run the snapshots suite against it.
+      PW_DEV_SERVER: '1'
     steps:
       - uses: actions/checkout@v4
 

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { signUp } from './helpers';
 
 /**
  * Screenshot capture flow (NOT a smoke assertion suite). Runs only where
@@ -57,14 +58,9 @@ test('capture screenshots of every screen', async ({ page }) => {
 		await shot(page, name);
 	}
 
-	// Sign up a fresh user (unique per run).
+	// Sign up a fresh user (unique per run), via the hydration-aware helper.
 	const email = `demo-${process.env.GITHUB_RUN_ID ?? 'local'}-${process.pid}@tradex.dev`;
-	await page.goto('/signup');
-	await page.fill('#name', 'Demo Trader');
-	await page.fill('#email', email);
-	await page.fill('input[type=password]', 'supersecret123');
-	await page.click('button[type=submit]');
-	await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
+	await signUp(page, email, 'Demo Trader');
 
 	// Seed a realistic dataset for this user (shares the browser auth cookies).
 	const res = await page.request.post('/api/dev/seed');

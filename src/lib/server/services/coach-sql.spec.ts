@@ -35,6 +35,8 @@ describe('runIsolatedQuery (sandbox)', () => {
 		{ symbol: 'TSLA', net_pnl: 250, day_of_week: 'Tuesday', hour: 11, is_win: true }
 	];
 
+	// Each case boots a fresh in-process PGlite (WASM) instance; under full-suite
+	// parallel load that cold start can exceed the 5s default, so allow 30s.
 	it('aggregates net P&L by weekday inside the isolated db', async () => {
 		const v = validateSelect(
 			'SELECT day_of_week, sum(net_pnl) AS pnl FROM trades GROUP BY day_of_week ORDER BY pnl DESC'
@@ -46,7 +48,7 @@ describe('runIsolatedQuery (sandbox)', () => {
 		expect(out.rows[0]).toMatchObject({ day_of_week: 'Tuesday', pnl: 250 });
 		const monday = out.rows.find((r) => r.day_of_week === 'Monday');
 		expect(Number(monday?.pnl)).toBe(60); // 100 - 40
-	});
+	}, 30000);
 
 	it('supports filtering (e.g. mornings)', async () => {
 		const v = validateSelect('SELECT count(*) AS n FROM trades WHERE hour < 12');
@@ -54,5 +56,5 @@ describe('runIsolatedQuery (sandbox)', () => {
 		if (!v.ok) return;
 		const out = await runIsolatedQuery(rows, v.sql);
 		expect(Number(out.rows[0]?.n)).toBe(2);
-	});
+	}, 30000);
 });

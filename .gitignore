@@ -30,3 +30,7 @@ screenshots
 *.db
 # PGlite local data
 .pgdata
+
+# Local-only Playwright verification config (not committed)
+pw.verify.config.ts
+pw.debug.mjs
