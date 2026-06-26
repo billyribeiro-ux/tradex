@@ -23,6 +23,19 @@ export type FieldTarget =
 /** target -> source header name */
 export type ColumnMap = Partial<Record<FieldTarget, string>>;
 
+/** Ordered field metadata for the interactive column mapper UI. */
+export const FIELD_TARGETS: { key: FieldTarget; label: string; required: boolean }[] = [
+	{ key: 'symbol', label: 'Symbol', required: true },
+	{ key: 'side', label: 'Side (buy/sell)', required: true },
+	{ key: 'qty', label: 'Quantity', required: true },
+	{ key: 'price', label: 'Price', required: true },
+	{ key: 'executedAt', label: 'Date / time', required: true },
+	{ key: 'fee', label: 'Fee', required: false },
+	{ key: 'commission', label: 'Commission', required: false },
+	{ key: 'assetClass', label: 'Asset class', required: false },
+	{ key: 'brokerExecId', label: 'Broker exec ID', required: false }
+];
+
 export interface NormalizedExecRow {
 	symbol: string;
 	assetClass?: AssetClass;

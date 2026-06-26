@@ -306,3 +306,39 @@ test('share a trade as a read-only public link (P&L hidden)', async ({ page, bro
 	expect(resp?.status()).toBe(404);
 	await ctx2.close();
 });
+
+test('import: preview → map columns → import → save & reuse a template', async ({ page }) => {
+	test.slow();
+	await signUp(page, uniqueEmail('imp'));
+	await page.goto('/import');
+	await waitForHydration(page);
+
+	await page.fill(
+		'textarea[name=csv]',
+		'Symbol,Side,Qty,Price,Date\nIMPX,Buy,5,100,2026-06-01T14:30:00Z\nIMPX,Sell,5,110,2026-06-01T15:30:00Z'
+	);
+	await page.click('button:has-text("Preview mapping")');
+
+	// the interactive mapper appears with the columns auto-detected
+	const symbolSelect = page.locator('select[name="map.symbol"]');
+	await expect(symbolSelect).toBeVisible();
+	await expect(symbolSelect).toHaveValue('Symbol');
+	// live preview shows the mapped symbol
+	await expect(page.getByRole('cell', { name: 'IMPX' }).first()).toBeVisible();
+
+	// save the mapping as a template while importing
+	await page.check('input[name=saveTemplate]');
+	await page.fill('input[name=templateName]', 'My IB');
+	await page.fill('input[name=broker]', 'IBKR');
+	await page.click('button:has-text("Import")');
+
+	await expect(page.getByText('executions imported')).toBeVisible({ timeout: 10000 });
+
+	// the round trip grouped into one closed trade
+	await page.goto('/trades?symbol=IMPX');
+	await expect(page.getByText('1 trades')).toBeVisible();
+
+	// the template persists for reuse
+	await page.goto('/import');
+	await expect(page.getByText('My IB')).toBeVisible();
+});
