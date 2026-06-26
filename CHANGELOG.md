@@ -57,10 +57,10 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - **Desktop (Tauri 2)** — `src-tauri/` shell (resolves to `tauri` 2.11.3, Cargo.lock committed,
   icon set generated); `pnpm tauri:dev` wraps the live app, `pnpm tauri:build` packages the
   `ADAPTER=static` SPA. (Offline data layer lands with Phase 3/4.)
-- **Tests** — 91 unit/integration passing + a Playwright E2E suite (happy-path plus feature
+- **Tests** — 103 unit/integration passing + a 10-case Playwright E2E suite (happy-path plus feature
   coverage: trade CRUD, export, multi-tenant isolation, accounts, coach states, playbooks, trade
-  metadata capture and analytics drill-down), wired into CI alongside lint, typecheck, build, and a
-  screenshot-capture job. CI via GitHub Actions.
+  metadata capture, analytics drill-down, category management, share links, and the import mapper),
+  wired into CI alongside lint, typecheck, build, and a screenshot-capture job. CI via GitHub Actions.
 
 ### Fixed (correctness audit)
 
@@ -79,6 +79,20 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - **Display.** Trade log honours the account's base currency (was hardcoded USD); dashboard shows
   "avg win / —" when there are no losses.
 
+### Added (Phase-2 features)
+
+- **Tag / setup / emotion management** (`/categories`, linked from Settings) — list each with a usage
+  count, rename in place, **merge** by renaming onto an existing name (re-points every trade, no
+  double-counting), and delete. All actions are userId-scoped.
+- **Read-only trade share links** — a trade detail page mints an unguessable `/share/<token>` that
+  renders a clean public view of that one trade (no auth; the token is the credential), with privacy
+  scopes to hide position size and/or dollar P&L (R-multiple still shown) and an optional 7/30-day
+  expiry. Create, copy and revoke from the trade; the public page is `no-store` + `noindex`.
+- **Interactive CSV column mapper + saved per-broker templates** — upload now previews into a
+  per-field column picker with a live sample preview; the confirmed mapping imports, and can be
+  **saved as a template** (name + broker) and reused later via a selector. The industry's #1 import
+  pain, made forgiving.
+
 ### Changed
 
 - **Analytics & calendar drill-down.** Symbol/asset-class bars and calendar day cells now link into a
@@ -88,9 +102,8 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 
 ### Deferred (next phases)
 
-- MFE/MAE + exit-efficiency (need an intrabar/tick price feed); saved import column-mapping templates;
-  tag/setup/emotion management UI; share links; multi-leg options grouping. (Schema is already in
-  place for these.)
+- MFE/MAE + exit-efficiency (need an intrabar/tick price feed); multi-leg options grouping;
+  AI-insight persistence; saved dashboard views. (Schema is already in place for these.)
 
 - JWT/JWKS + bearer auth (added in Phase 3 for the Rust/Axum API and Tauri desktop).
 - Multi-leg options analytics; alt-exit backtest simulation.
