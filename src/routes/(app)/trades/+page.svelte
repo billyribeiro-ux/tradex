@@ -85,8 +85,8 @@
 						</td>
 						<td class="mono" style="color:var(--color-muted)">{formatDate(t.openedAt)}</td>
 						<td class="mono">{fromScaled(t.qtyOpened)}</td>
-						<td class="mono">{formatMoney(t.avgEntry, 'USD')}</td>
-						<td class="mono">{t.avgExit != null ? formatMoney(t.avgExit, 'USD') : '—'}</td>
+						<td class="mono">{formatMoney(t.avgEntry, data.currency)}</td>
+						<td class="mono">{t.avgExit != null ? formatMoney(t.avgExit, data.currency) : '—'}</td>
 						<td class="mono" style="color:var(--color-muted)">{formatDuration(t.holdMs)}</td>
 						<td class="mono" style="color:var(--color-muted)">
 							{t.rMultiple != null ? `${formatRatio(t.rMultiple)}R` : '—'}
@@ -95,7 +95,7 @@
 							class="mono font-semibold"
 							style="color:{t.netPnl >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
 						>
-							{t.status === 'open' ? '—' : formatMoney(t.netPnl, 'USD', { signed: true })}
+							{t.status === 'open' ? '—' : formatMoney(t.netPnl, data.currency, { signed: true })}
 						</td>
 					</tr>
 				{/each}

@@ -5,6 +5,7 @@
 	import CalendarHeatmap from '$lib/components/CalendarHeatmap.svelte';
 	import { reveal, revealChildren } from '$lib/motion';
 	import { fromScaled, toScaled, formatMoney } from '$lib/money';
+	import { INFINITE_RATIO } from '$lib/domain/metrics';
 	import { formatDate } from '$lib/format';
 
 	let { data } = $props();
@@ -26,7 +27,7 @@
 	const money = (n: number) => formatMoney(toScaled(n), currency, { signed: true });
 	const moneyPlain = (n: number) => formatMoney(toScaled(n), currency);
 	const pct = (n: number) => `${n.toFixed(0)}%`;
-	const rat = (n: number) => (n >= 9999 ? '∞' : n.toFixed(2));
+	const rat = (n: number) => (n >= fromScaled(INFINITE_RATIO) ? '∞' : n.toFixed(2));
 	const tone = (v: number): 'up' | 'down' | 'neutral' =>
 		v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
 </script>
@@ -106,7 +107,9 @@
 			label="Avg Win / Loss"
 			value={fromScaled(m.avgWinLossRatio)}
 			format={rat}
-			sub="{moneyPlain(fromScaled(m.avgWin))} / {moneyPlain(fromScaled(m.avgLoss))}"
+			sub={m.lossCount === 0
+				? `${moneyPlain(fromScaled(m.avgWin))} / —`
+				: `${moneyPlain(fromScaled(m.avgWin))} / ${moneyPlain(fromScaled(m.avgLoss))}`}
 		/>
 		<KpiCard
 			label="Open Positions"

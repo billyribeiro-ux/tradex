@@ -70,4 +70,16 @@ describe('evaluatePropFirm', () => {
 		expect(rule.value).toBe(80);
 		expect(rule.met).toBe(false);
 	});
+
+	it('keeps the consistency rule visible (met) when there is no profit yet', () => {
+		// With no profitable days, concentration is undefined — but the rule must
+		// not silently vanish from the configured rule set (the old code dropped it).
+		const s = evaluatePropFirm({ consistencyPct: 50 }, [
+			trade(-300, day(2026, 0, 1)),
+			trade(-100, day(2026, 0, 2))
+		]);
+		const rule = s.rules.find((r) => r.label.startsWith('Consistency'));
+		expect(rule).toBeDefined();
+		expect(rule!.met).toBe(true);
+	});
 });

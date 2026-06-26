@@ -10,7 +10,8 @@ export const load: PageServerLoad = async ({ parent, locals }) => {
 	if (!account) return { calendar: [], currency: 'USD' };
 	const dashboard = await getDashboard(db, {
 		id: account.id,
-		startingBalance: account.startingBalance
+		startingBalance: account.startingBalance,
+		timezone: account.timezone
 	});
 	return { calendar: dashboard.calendar, currency: account.baseCurrency };
 };

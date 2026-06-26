@@ -116,6 +116,7 @@ export async function updateAccount(
 		assetClasses: AssetClass[];
 		baseCurrency: string;
 		startingBalance: number;
+		timezone: string;
 		isPropFirm: boolean;
 	}>
 ): Promise<boolean> {
@@ -126,6 +127,7 @@ export async function updateAccount(
 		'assetClasses',
 		'baseCurrency',
 		'startingBalance',
+		'timezone',
 		'isPropFirm'
 	] as const) {
 		if (input[k] !== undefined) set[k] = input[k];

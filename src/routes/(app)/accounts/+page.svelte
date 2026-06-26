@@ -97,6 +97,13 @@
 									value={a.startingBalance / 1e8}
 								/></label
 							>
+							<label class="flex flex-col gap-1 sm:col-span-2"
+								><span class="label">Timezone</span><select name="timezone" class="input">
+									{#each data.timezones as tz (tz)}
+										<option value={tz} selected={tz === a.timezone}>{tz.replace('_', ' ')}</option>
+									{/each}
+								</select></label
+							>
 							<div class="sm:col-span-2">
 								<div class="label mb-1">Asset classes</div>
 								<div class="grid grid-cols-2 gap-1">
@@ -169,6 +176,18 @@
 					value="0"
 				/>
 			</div>
+		</div>
+
+		<div class="mb-3">
+			<label class="label" for="timezone">Timezone</label>
+			<select id="timezone" name="timezone" class="input mt-1">
+				{#each data.timezones as tz (tz)}
+					<option value={tz} selected={tz === 'UTC'}>{tz.replace('_', ' ')}</option>
+				{/each}
+			</select>
+			<p class="mono mt-1 text-xs" style="color:var(--color-faint)">
+				Days, weekdays & sessions are bucketed in this zone.
+			</p>
 		</div>
 
 		<div class="label mb-1">Asset classes</div>

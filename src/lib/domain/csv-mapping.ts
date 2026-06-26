@@ -1,4 +1,5 @@
 import { toScaled } from '$lib/money';
+import { naiveToUtc } from '$lib/datetime';
 import { ASSET_CLASSES, type AssetClass, type Side } from './enums';
 
 /**
@@ -94,7 +95,11 @@ export function detectColumns(headers: readonly string[]): ColumnMap {
 }
 
 /** Map and validate a single CSV row. Never throws — returns per-field errors. */
-export function mapRow(row: Record<string, string>, map: ColumnMap): MapRowResult {
+export function mapRow(
+	row: Record<string, string>,
+	map: ColumnMap,
+	timezone = 'UTC'
+): MapRowResult {
 	const errors: FieldError[] = [];
 	const get = (t: FieldTarget) => (map[t] ? (row[map[t]!] ?? '').trim() : '');
 
@@ -113,11 +118,11 @@ export function mapRow(row: Record<string, string>, map: ColumnMap): MapRowResul
 
 	const priceRaw = get('price');
 	const price = parseDecimal(priceRaw);
-	if (price == null)
+	if (price == null || price <= 0)
 		errors.push({ field: 'price', value: priceRaw, message: `Invalid price "${priceRaw}"` });
 
 	const executedRaw = get('executedAt');
-	const executedAt = parseTimestamp(executedRaw);
+	const executedAt = parseTimestamp(executedRaw, timezone);
 	if (executedAt == null)
 		errors.push({
 			field: 'executedAt',
@@ -190,24 +195,47 @@ export function parseDecimal(raw: string): number | null {
 	return negative ? -n : n;
 }
 
-/** Parse a date string or epoch number into UTC epoch ms. */
-export function parseTimestamp(raw: string): number | null {
+/**
+ * Parse a date string or epoch number into UTC epoch ms.
+ *
+ * A naive (offset-less) datetime is interpreted in the account's `timezone`,
+ * not as UTC — a NY trader importing "2026-06-24 14:30:00" means 14:30 ET
+ * (18:30 UTC), not 14:30 UTC. Strings carrying an explicit offset (Z / ±HH:MM)
+ * are honoured as-is. Date-only values map to UTC midnight (no wall-clock to
+ * place). The ISO detection is anchored to `YYYY-MM-DD` so tz-named strings
+ * like "... EDT" (which contain a 'T') aren't mis-detected as ISO.
+ */
+export function parseTimestamp(raw: string, timezone = 'UTC'): number | null {
 	if (!raw) return null;
 	const s = raw.trim();
 	// epoch seconds / ms
 	if (/^\d{10}$/.test(s)) return Number(s) * 1000;
 	if (/^\d{13}$/.test(s)) return Number(s);
-	// normalize "YYYY-MM-DD HH:MM:SS" -> ISO so Date treats it consistently
-	let iso = s.includes('T') ? s : s.replace(/\s+/, 'T');
-	// A date-time without a timezone designator is parsed as LOCAL time by JS,
-	// but this system treats every executedAt as UTC epoch ms. Append 'Z' when a
-	// time component is present and no offset is given. (Date-only strings are
-	// already interpreted as UTC midnight, so leave those untouched.)
-	const hasTime = /T\d{2}:/.test(iso);
-	const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(iso);
-	if (hasTime && !hasTz) iso = `${iso}Z`;
-	const t = Date.parse(iso);
-	if (!Number.isNaN(t)) return t;
-	const t2 = Date.parse(s);
-	return Number.isNaN(t2) ? null : t2;
+
+	// Anchored ISO-ish date or datetime with an optional offset designator.
+	const m = s.match(
+		/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?\s*([zZ]|[+-]\d{2}:?\d{2})?$/
+	);
+	if (m) {
+		const y = Number(m[1]);
+		const mo = Number(m[2]);
+		const d = Number(m[3]);
+		const h = m[4];
+		if (h === undefined) return Date.UTC(y, mo - 1, d); // date only → UTC midnight
+		const mi = Number(m[5] ?? 0);
+		const sec = Number(m[6] ?? 0);
+		const offset = m[7];
+		if (offset) {
+			const iso = `${m[1]}-${m[2]}-${m[3]}T${h}:${m[5] ?? '00'}:${m[6] ?? '00'}${offset}`;
+			const t = Date.parse(iso);
+			return Number.isNaN(t) ? null : t;
+		}
+		// naive wall-clock → interpret in the account timezone
+		return naiveToUtc(y, mo - 1, d, Number(h), mi, sec, timezone);
+	}
+
+	// Fallback for other formats (e.g. "Jun 24 2026 14:30 EDT"): lenient parse,
+	// which honours named/offset zones where the engine supports them.
+	const t = Date.parse(s);
+	return Number.isNaN(t) ? null : t;
 }

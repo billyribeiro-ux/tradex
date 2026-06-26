@@ -6,13 +6,19 @@ import {
 	updateAccount,
 	deleteAccount
 } from '$lib/server/services/accounts';
-import { ASSET_CLASSES, type AssetClass } from '$lib/domain/enums';
+import { ASSET_CLASSES, COMMON_TIMEZONES, type AssetClass } from '$lib/domain/enums';
 import { toScaled } from '$lib/money';
 import type { Actions, PageServerLoad } from './$types';
 
+/** Accept a known IANA zone from the picker; fall back to UTC for anything else. */
+function normalizeTimezone(raw: unknown): string {
+	const v = typeof raw === 'string' ? raw.trim() : '';
+	return (COMMON_TIMEZONES as readonly string[]).includes(v) ? v : 'UTC';
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) return { accounts: [] };
-	return { accounts: await listAccounts(db, locals.user.id) };
+	if (!locals.user) return { accounts: [], timezones: COMMON_TIMEZONES };
+	return { accounts: await listAccounts(db, locals.user.id), timezones: COMMON_TIMEZONES };
 };
 
 export const actions: Actions = {
@@ -35,6 +41,7 @@ export const actions: Actions = {
 			assetClasses: assetClasses.length ? assetClasses : ['stock'],
 			baseCurrency: ((fd.get('baseCurrency') as string) || 'USD').toUpperCase(),
 			startingBalance: toScaled(startingBalance),
+			timezone: normalizeTimezone(fd.get('timezone')),
 			isPropFirm: fd.get('isPropFirm') === 'on'
 		});
 		return { created: true };
@@ -59,6 +66,7 @@ export const actions: Actions = {
 			assetClasses: assetClasses.length ? assetClasses : ['stock'],
 			baseCurrency: ((fd.get('baseCurrency') as string) || 'USD').toUpperCase(),
 			startingBalance: toScaled(startingBalance),
+			timezone: normalizeTimezone(fd.get('timezone')),
 			isPropFirm: fd.get('isPropFirm') === 'on'
 		});
 		if (!ok) return fail(404, { message: 'Account not found' });

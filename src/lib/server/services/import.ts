@@ -6,6 +6,27 @@ import type { AssetClass } from '$lib/domain/enums';
 import { findOrCreateInstrument } from './instruments';
 import { recordExecutions, type ExecutionInput } from './trades';
 
+/** Guardrails: Papa.parse loads the whole file into memory, so cap input size
+ * and row count to avoid a memory/timeout DoS from a hostile or accidental
+ * giant upload. Exceeding either throws CsvTooLargeError (shown to the user). */
+export const MAX_CSV_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MAX_CSV_ROWS = 100_000;
+
+export class CsvTooLargeError extends Error {}
+
+function assertCsvSize(csvText: string, rowCount?: number) {
+	if (csvText.length > MAX_CSV_BYTES) {
+		throw new CsvTooLargeError(
+			`CSV is too large (${(csvText.length / 1024 / 1024).toFixed(1)} MB; limit ${MAX_CSV_BYTES / 1024 / 1024} MB). Split it into smaller files.`
+		);
+	}
+	if (rowCount != null && rowCount > MAX_CSV_ROWS) {
+		throw new CsvTooLargeError(
+			`CSV has too many rows (${rowCount.toLocaleString()}; limit ${MAX_CSV_ROWS.toLocaleString()}). Split it into smaller files.`
+		);
+	}
+}
+
 export interface RowError {
 	row: number;
 	messages: string[];
@@ -28,10 +49,12 @@ export interface ImportPreview {
 
 /** Parse a CSV and auto-detect its columns, for the import UI to confirm. */
 export function previewCsv(csvText: string): ImportPreview {
+	assertCsvSize(csvText);
 	const parsed = Papa.parse<Record<string, string>>(csvText, {
 		header: true,
 		skipEmptyLines: true
 	});
+	assertCsvSize(csvText, parsed.data.length);
 	const headers = parsed.meta.fields ?? [];
 	return {
 		headers,
@@ -55,12 +78,16 @@ export async function importCsv(
 		filename?: string;
 		mapping?: ColumnMap;
 		mappingTemplateId?: string | null;
+		/** Account timezone; naive CSV timestamps are interpreted in it. */
+		timezone?: string;
 	}
 ): Promise<ImportResult> {
+	assertCsvSize(opts.csvText);
 	const parsed = Papa.parse<Record<string, string>>(opts.csvText, {
 		header: true,
 		skipEmptyLines: true
 	});
+	assertCsvSize(opts.csvText, parsed.data.length);
 	const headers = parsed.meta.fields ?? [];
 	const mapping = opts.mapping ?? detectColumns(headers);
 	const fallbackClass: AssetClass = opts.defaultAssetClass ?? 'stock';
@@ -73,7 +100,7 @@ export async function importCsv(
 	const errors: RowError[] = [];
 
 	parsed.data.forEach((raw, i) => {
-		const mapped = mapRow(raw, mapping);
+		const mapped = mapRow(raw, mapping, opts.timezone ?? 'UTC');
 		if (!mapped.ok) {
 			errors.push({ row: i + 2, messages: mapped.errors.map((e) => e.message) }); // +2: header + 1-index
 			return;

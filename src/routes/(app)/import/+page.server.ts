@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { importCsv } from '$lib/server/services/import';
+import { importCsv, CsvTooLargeError } from '$lib/server/services/import';
 import { getAccount, resolveAccount } from '$lib/server/services/accounts';
 import { ASSET_CLASSES, type AssetClass } from '$lib/domain/enums';
 import type { Actions, PageServerLoad } from './$types';
@@ -33,12 +33,18 @@ export const actions: Actions = {
 		}
 		if (!csvText) return fail(400, { message: 'Upload a CSV file or paste rows.' });
 
-		const result = await importCsv(db, {
-			accountId: account.id,
-			csvText,
-			defaultAssetClass,
-			filename
-		});
-		return { result };
+		try {
+			const result = await importCsv(db, {
+				accountId: account.id,
+				csvText,
+				defaultAssetClass,
+				filename,
+				timezone: account.timezone
+			});
+			return { result };
+		} catch (e) {
+			if (e instanceof CsvTooLargeError) return fail(413, { message: e.message });
+			throw e;
+		}
 	}
 };

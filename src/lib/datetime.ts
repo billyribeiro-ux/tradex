@@ -59,3 +59,61 @@ export function tzHour(ms: number, tz = 'UTC'): number {
 		.find((p) => p.type === 'hour')?.value;
 	return Number(h ?? 0) % 24;
 }
+
+const offsetCache = new Map<string, Intl.DateTimeFormat>();
+function offsetFmt(tz: string): Intl.DateTimeFormat {
+	let f = offsetCache.get(tz);
+	if (!f) {
+		try {
+			f = new Intl.DateTimeFormat('en-US', {
+				timeZone: tz,
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hourCycle: 'h23'
+			});
+		} catch {
+			return offsetFmt('UTC');
+		}
+		offsetCache.set(tz, f);
+	}
+	return f;
+}
+
+/** The timezone's offset from UTC, in ms (local − UTC), at the given instant. */
+function tzOffsetMs(ms: number, tz: string): number {
+	const p = offsetFmt(tz).formatToParts(ms);
+	const get = (t: string) => Number(p.find((x) => x.type === t)?.value ?? 0);
+	const asIfUtc = Date.UTC(
+		get('year'),
+		get('month') - 1,
+		get('day'),
+		get('hour') % 24,
+		get('minute'),
+		get('second')
+	);
+	return asIfUtc - ms;
+}
+
+/**
+ * Interpret a naive (timezone-less) wall-clock time as being in `tz` and return
+ * the corresponding UTC epoch ms. e.g. 2026-06-24 14:30 in America/New_York
+ * (EDT, −4) → 2026-06-24 18:30 UTC. Two correction passes handle DST boundaries.
+ */
+export function naiveToUtc(
+	year: number,
+	month0: number,
+	day: number,
+	hour: number,
+	minute: number,
+	second: number,
+	tz = 'UTC'
+): number {
+	const guess = Date.UTC(year, month0, day, hour, minute, second);
+	let utc = guess - tzOffsetMs(guess, tz);
+	utc = guess - tzOffsetMs(utc, tz);
+	return utc;
+}

@@ -128,11 +128,14 @@ export function evaluatePropFirm(
 			unit: 'count'
 		});
 	}
-	if (config.consistencyPct != null && totalProfit > 0) {
-		const sharePct = Math.round((bestDay / totalProfit) * 100);
+	if (config.consistencyPct != null) {
+		// Until the account is net-profitable the rule can't be evaluated (no
+		// profit to concentrate), so keep it visible but treat it as satisfied
+		// rather than dropping it from the rule set entirely.
+		const sharePct = totalProfit > 0 ? Math.round((bestDay / totalProfit) * 100) : 0;
 		rules.push({
 			label: `Consistency (best day ≤ ${config.consistencyPct}%)`,
-			met: sharePct <= config.consistencyPct,
+			met: totalProfit <= 0 ? true : sharePct <= config.consistencyPct,
 			breached: false,
 			value: sharePct,
 			limit: config.consistencyPct,

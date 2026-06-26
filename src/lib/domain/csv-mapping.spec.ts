@@ -68,8 +68,25 @@ describe('parseTimestamp', () => {
 	it('respects an explicit offset when present', () => {
 		expect(parseTimestamp('2026-06-24T14:30:00-04:00')).toBe(Date.UTC(2026, 5, 24, 18, 30, 0));
 	});
-	it('parses a date-only string as UTC midnight', () => {
+	it('interprets a naive datetime in the account timezone', () => {
+		// 2026-06-24 14:30 in America/New_York (EDT, −4) == 18:30 UTC.
+		expect(parseTimestamp('2026-06-24 14:30:00', 'America/New_York')).toBe(
+			Date.UTC(2026, 5, 24, 18, 30, 0)
+		);
+		// A winter date uses EST (−5): 2026-01-15 09:00 ET == 14:00 UTC.
+		expect(parseTimestamp('2026-01-15 09:00', 'America/New_York')).toBe(
+			Date.UTC(2026, 0, 15, 14, 0, 0)
+		);
+	});
+	it('does not mis-detect a tz-named string (… EDT) as naive ISO', () => {
+		// "EDT" contains a 'T'; the old includes('T') check skipped normalization
+		// and dropped the zone. Now it falls through to a lenient parse that keeps
+		// the EDT offset (−4): 14:30 EDT == 18:30 UTC.
+		expect(parseTimestamp('2026-06-24 14:30:00 EDT')).toBe(Date.UTC(2026, 5, 24, 18, 30, 0));
+	});
+	it('parses a date-only string as UTC midnight regardless of tz', () => {
 		expect(parseTimestamp('2026-06-24')).toBe(Date.UTC(2026, 5, 24, 0, 0, 0));
+		expect(parseTimestamp('2026-06-24', 'America/New_York')).toBe(Date.UTC(2026, 5, 24, 0, 0, 0));
 	});
 	it('parses epoch seconds and ms', () => {
 		expect(parseTimestamp('1700000000')).toBe(1700000000 * 1000);
@@ -113,5 +130,26 @@ describe('mapRow', () => {
 			const fields = r.errors.map((e) => e.field).sort();
 			expect(fields).toEqual(['executedAt', 'price', 'qty', 'side', 'symbol']);
 		}
+	});
+
+	it('rejects a non-positive price (0 or negative)', () => {
+		for (const Price of ['0', '-5', '(10)']) {
+			const r = mapRow(
+				{ Symbol: 'AAPL', Side: 'Buy', Qty: '100', Price, Date: '2026-06-24T14:30:00Z' },
+				map
+			);
+			expect(r.ok, `price ${Price}`).toBe(false);
+			if (!r.ok) expect(r.errors.some((e) => e.field === 'price')).toBe(true);
+		}
+	});
+
+	it('threads the account timezone into the executedAt timestamp', () => {
+		const r = mapRow(
+			{ Symbol: 'AAPL', Side: 'Buy', Qty: '1', Price: '10', Date: '2026-06-24 14:30:00' },
+			map,
+			'America/New_York'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.executedAt).toBe(Date.UTC(2026, 5, 24, 18, 30, 0));
 	});
 });
