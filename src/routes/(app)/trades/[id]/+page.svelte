@@ -4,13 +4,28 @@
 	import { formatDateTime, formatDuration } from '$lib/format';
 	import TradePath from '$lib/components/TradePath.svelte';
 	import { reveal } from '$lib/motion';
-	import { Trash } from 'phosphor-svelte';
+	import { page } from '$app/state';
+	import { Trash, ShareNetwork, Copy, Check } from 'phosphor-svelte';
 
 	let { data, form } = $props();
 	const t = $derived(data.detail.trade);
 	const inst = $derived(data.detail.instrument);
 	const cur = $derived(data.currency);
 	const stat = (n: number | null, fmt: (v: number) => string) => (n != null ? fmt(n) : '—');
+
+	// Full share URL — page.url.origin is correct on both server and client.
+	const shareUrl = (token: string) => `${page.url.origin}/share/${token}`;
+
+	let copied = $state<string | null>(null);
+	async function copy(token: string) {
+		try {
+			await navigator.clipboard.writeText(shareUrl(token));
+			copied = token;
+			setTimeout(() => (copied = copied === token ? null : copied), 1500);
+		} catch {
+			/* clipboard unavailable */
+		}
+	}
 </script>
 
 <svelte:head><title>{inst.symbol} trade · TradeX</title></svelte:head>
@@ -39,22 +54,87 @@
 					{t.status === 'open' ? '—' : formatMoney(t.netPnl, cur, { signed: true })}
 				</div>
 			</div>
-			<form method="POST" action="?/delete" use:enhance>
-				<button
-					type="submit"
-					class="btn btn-ghost text-xs"
-					style="color:var(--color-down)"
-					onclick={(e) => {
-						if (!confirm('Delete this trade and its executions? This cannot be undone.'))
-							e.preventDefault();
-					}}
-				>
-					<Trash size={14} /> Delete trade
-				</button>
-			</form>
+			<div class="flex gap-2">
+				<details class="relative">
+					<summary class="btn btn-ghost text-xs"><ShareNetwork size={14} /> Share</summary>
+					<div
+						class="panel absolute right-0 z-20 mt-2 w-80 p-4"
+						style="box-shadow:var(--shadow-pop)"
+					>
+						<form method="POST" action="?/share" use:enhance class="flex flex-col gap-2 text-sm">
+							<p class="text-xs" style="color:var(--color-muted)">
+								Create a read-only public link to this trade.
+							</p>
+							<label class="flex items-center gap-2"
+								><input type="checkbox" name="hideSize" /> Hide position size</label
+							>
+							<label class="flex items-center gap-2"
+								><input type="checkbox" name="hidePnl" /> Hide dollar P&L (show R only)</label
+							>
+							<label class="flex items-center justify-between gap-2"
+								>Expires
+								<select name="expiresInDays" class="input w-32 py-1 text-xs">
+									<option value="">Never</option>
+									<option value="7">In 7 days</option>
+									<option value="30">In 30 days</option>
+								</select>
+							</label>
+							<button type="submit" class="btn btn-primary mt-1 text-xs">Create link</button>
+						</form>
+					</div>
+				</details>
+				<form method="POST" action="?/delete" use:enhance>
+					<button
+						type="submit"
+						class="btn btn-ghost text-xs"
+						style="color:var(--color-down)"
+						onclick={(e) => {
+							if (!confirm('Delete this trade and its executions? This cannot be undone.'))
+								e.preventDefault();
+						}}
+					>
+						<Trash size={14} /> Delete trade
+					</button>
+				</form>
+			</div>
 		</div>
 	</div>
 </div>
+
+{#if data.shares.length || form?.shared}
+	<div class="panel mb-3" use:reveal>
+		<div class="panel-h"><span class="panel-t">Share links</span></div>
+		<div class="flex flex-col">
+			{#each data.shares as link (link.id)}
+				<div
+					class="flex items-center gap-2 border-t px-4 py-2 first:border-t-0"
+					style="border-color:var(--color-hairline)"
+				>
+					<input
+						class="input flex-1 py-1 font-mono text-xs"
+						readonly
+						value={shareUrl(link.token)}
+						aria-label="Share URL"
+					/>
+					<button type="button" class="btn btn-ghost text-xs" onclick={() => copy(link.token)}>
+						{#if copied === link.token}<Check size={14} /> Copied{:else}<Copy size={14} /> Copy{/if}
+					</button>
+					{#if link.scope.hideSize}<span class="chip">no size</span>{/if}
+					{#if link.scope.hidePnl}<span class="chip">no $</span>{/if}
+					{#if link.expiresAt}<span class="chip" title="expires"
+							>exp {new Date(link.expiresAt).toISOString().slice(0, 10)}</span
+						>{/if}
+					<form method="POST" action="?/revokeShare" use:enhance>
+						<input type="hidden" name="id" value={link.id} />
+						<button type="submit" class="btn btn-ghost text-xs" style="color:var(--color-down)"
+							>Revoke</button
+						>
+					</form>
+				</div>
+			{/each}
+		</div>
+	</div>
+{/if}
 
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
 	{#snippet cell(label: string, value: string)}

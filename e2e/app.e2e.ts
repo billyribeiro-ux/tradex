@@ -247,7 +247,9 @@ test('categories: list with usage, rename a tag, delete a setup', async ({ page 
 		page.locator('form[action="?/renameTag"] button[type=submit]').click()
 	]);
 	await page.goto('/categories');
-	await expect(page.locator('form[action="?/renameTag"] input[name=name]')).toHaveValue('breakout2');
+	await expect(page.locator('form[action="?/renameTag"] input[name=name]')).toHaveValue(
+		'breakout2'
+	);
 
 	// delete the setup → the setups section is empty
 	page.on('dialog', (d) => d.accept());
@@ -257,4 +259,50 @@ test('categories: list with usage, rename a tag, delete a setup', async ({ page 
 	]);
 	await page.goto('/categories');
 	await expect(page.locator('form[action="?/renameSetup"]')).toHaveCount(0);
+});
+
+test('share a trade as a read-only public link (P&L hidden)', async ({ page, browser }) => {
+	test.slow();
+	await signUp(page, uniqueEmail('share'));
+	const id = await createTrade(page, {
+		symbol: 'SHRX',
+		entryPrice: '100',
+		exitPrice: '110',
+		entryAt: '2026-06-01T14:30',
+		exitAt: '2026-06-01T15:30'
+	});
+
+	await page.goto(`/trades/${id}`);
+	await waitForHydration(page);
+	await page.click('summary:has-text("Share")');
+	await page.check('input[name=hidePnl]');
+	await Promise.all([
+		page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/trades/')),
+		page.click('button:has-text("Create link")')
+	]);
+
+	const url = await page.locator('input[aria-label="Share URL"]').first().inputValue();
+	expect(url).toContain('/share/');
+
+	// open it in a fresh anonymous context — no auth, the token is the credential
+	const ctx = await browser.newContext();
+	const pub = await ctx.newPage();
+	await pub.goto(url);
+	await expect(pub.getByText('Shared · read-only')).toBeVisible();
+	await expect(pub.getByRole('heading', { name: 'SHRX' })).toBeVisible();
+	await expect(pub.getByText('Net P&L')).toHaveCount(0); // hidePnl honoured
+	await ctx.close();
+
+	// revoke → the public link 404s
+	await page.goto(`/trades/${id}`);
+	await waitForHydration(page);
+	await Promise.all([
+		page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/trades/')),
+		page.locator('form[action="?/revokeShare"] button[type=submit]').first().click()
+	]);
+	const ctx2 = await browser.newContext();
+	const pub2 = await ctx2.newPage();
+	const resp = await pub2.goto(url);
+	expect(resp?.status()).toBe(404);
+	await ctx2.close();
 });
