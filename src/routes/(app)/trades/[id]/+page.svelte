@@ -31,7 +31,7 @@
 <svelte:head><title>{inst.symbol} trade · TradeX</title></svelte:head>
 
 <div class="panel mb-3">
-	<div class="flex items-start justify-between p-5">
+	<div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
 		<div>
 			<a href="/trades" class="mono text-xs" style="color:var(--color-muted)">← Trades</a>
 			<h1 class="mt-1 flex items-center gap-3 text-2xl font-bold">
@@ -44,8 +44,8 @@
 				</span>
 			</h1>
 		</div>
-		<div class="flex flex-col items-end gap-2">
-			<div class="text-right">
+		<div class="flex flex-col items-start gap-2 sm:items-end">
+			<div class="sm:text-right">
 				<div class="label">Net P&L</div>
 				<div
 					class="kpi-val tnum"
@@ -58,7 +58,7 @@
 				<details class="relative">
 					<summary class="btn btn-ghost text-xs"><ShareNetwork size={14} /> Share</summary>
 					<div
-						class="panel absolute right-0 z-20 mt-2 w-80 p-4"
+						class="panel absolute right-0 z-20 mt-2 w-[min(20rem,calc(100vw-2.5rem))] p-4"
 						style="box-shadow:var(--shadow-pop)"
 					>
 						<form method="POST" action="?/share" use:enhance class="flex flex-col gap-2 text-sm">

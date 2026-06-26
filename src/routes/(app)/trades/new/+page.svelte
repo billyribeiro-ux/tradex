@@ -120,7 +120,7 @@
 		</div>
 	</div>
 
-	<div class="mt-4 grid grid-cols-3 gap-4">
+	<div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
 		<div>
 			<label class="label" for="fees">Fees</label>
 			<input

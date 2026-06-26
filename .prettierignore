@@ -12,3 +12,4 @@ bun.lockb
 # Local-only Playwright verification config
 pw.verify.config.ts
 pw.debug.mjs
+pw.responsive.mjs

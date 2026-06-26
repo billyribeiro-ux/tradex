@@ -78,13 +78,13 @@
 			<thead>
 				<tr>
 					<th>Symbol</th>
-					<th>Side</th>
+					<th class="hidden md:table-cell">Side</th>
 					<th>Status</th>
-					<th>Opened</th>
-					<th>Qty</th>
-					<th>Entry</th>
-					<th>Exit</th>
-					<th>Hold</th>
+					<th class="hidden md:table-cell">Opened</th>
+					<th class="hidden md:table-cell">Qty</th>
+					<th class="hidden md:table-cell">Entry</th>
+					<th class="hidden md:table-cell">Exit</th>
+					<th class="hidden md:table-cell">Hold</th>
 					<th>R</th>
 					<th>Net P&L</th>
 				</tr>
@@ -97,17 +97,25 @@
 								>{t.symbol}</a
 							>
 						</td>
-						<td class="capitalize" style="color:var(--color-muted)">{t.direction}</td>
+						<td class="hidden capitalize md:table-cell" style="color:var(--color-muted)"
+							>{t.direction}</td
+						>
 						<td>
 							<span class="chip" style={t.status === 'open' ? 'color:var(--color-accent)' : ''}>
 								{t.status}
 							</span>
 						</td>
-						<td class="mono" style="color:var(--color-muted)">{formatDate(t.openedAt)}</td>
-						<td class="mono">{fromScaled(t.qtyOpened)}</td>
-						<td class="mono">{formatMoney(t.avgEntry, data.currency)}</td>
-						<td class="mono">{t.avgExit != null ? formatMoney(t.avgExit, data.currency) : '—'}</td>
-						<td class="mono" style="color:var(--color-muted)">{formatDuration(t.holdMs)}</td>
+						<td class="mono hidden md:table-cell" style="color:var(--color-muted)"
+							>{formatDate(t.openedAt)}</td
+						>
+						<td class="mono hidden md:table-cell">{fromScaled(t.qtyOpened)}</td>
+						<td class="mono hidden md:table-cell">{formatMoney(t.avgEntry, data.currency)}</td>
+						<td class="mono hidden md:table-cell"
+							>{t.avgExit != null ? formatMoney(t.avgExit, data.currency) : '—'}</td
+						>
+						<td class="mono hidden md:table-cell" style="color:var(--color-muted)"
+							>{formatDuration(t.holdMs)}</td
+						>
 						<td class="mono" style="color:var(--color-muted)">
 							{t.rMultiple != null ? `${formatRatio(t.rMultiple)}R` : '—'}
 						</td>
