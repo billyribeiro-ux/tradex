@@ -285,6 +285,8 @@ export async function applyTradeAnnotations(
 
 export interface TradeFilter {
 	status?: 'open' | 'closed';
+	symbol?: string;
+	assetClass?: AssetClass;
 	from?: number;
 	to?: number;
 	limit?: number;
@@ -296,17 +298,23 @@ export type TradeRow = typeof trade.$inferSelect & {
 	assetClass: AssetClass;
 };
 
+/** Shared WHERE conditions for the trade list/count (drill-down filters). */
+function tradeConds(accountId: string, f: TradeFilter) {
+	const conds = [eq(trade.accountId, accountId)];
+	if (f.status) conds.push(eq(trade.status, f.status));
+	if (f.symbol) conds.push(eq(instrument.symbol, f.symbol));
+	if (f.assetClass) conds.push(eq(instrument.assetClass, f.assetClass));
+	if (f.from != null) conds.push(gte(trade.openedAt, f.from));
+	if (f.to != null) conds.push(lte(trade.openedAt, f.to));
+	return conds;
+}
+
 /** List trades for an account (newest first) joined with instrument symbol. */
 export async function listTrades(
 	db: DB,
 	accountId: string,
 	filter: TradeFilter = {}
 ): Promise<TradeRow[]> {
-	const conds = [eq(trade.accountId, accountId)];
-	if (filter.status) conds.push(eq(trade.status, filter.status));
-	if (filter.from != null) conds.push(gte(trade.openedAt, filter.from));
-	if (filter.to != null) conds.push(lte(trade.openedAt, filter.to));
-
 	const rows = await db
 		.select({
 			trade,
@@ -315,7 +323,7 @@ export async function listTrades(
 		})
 		.from(trade)
 		.innerJoin(instrument, eq(trade.instrumentId, instrument.id))
-		.where(and(...conds))
+		.where(and(...tradeConds(accountId, filter)))
 		.orderBy(desc(trade.openedAt))
 		.limit(filter.limit ?? 200)
 		.offset(filter.offset ?? 0);
@@ -323,14 +331,17 @@ export async function listTrades(
 	return rows.map((r) => ({ ...r.trade, symbol: r.symbol, assetClass: r.assetClass }));
 }
 
-/** Count trades for an account matching the (status) filter. */
-export async function countTrades(db: DB, accountId: string, status?: 'open' | 'closed') {
-	const conds = [eq(trade.accountId, accountId)];
-	if (status) conds.push(eq(trade.status, status));
+/** Count trades for an account matching the drill-down filter. */
+export async function countTrades(
+	db: DB,
+	accountId: string,
+	filter: Omit<TradeFilter, 'limit' | 'offset'> = {}
+) {
 	const [row] = await db
 		.select({ n: sql<number>`count(*)` })
 		.from(trade)
-		.where(and(...conds));
+		.innerJoin(instrument, eq(trade.instrumentId, instrument.id))
+		.where(and(...tradeConds(accountId, filter)));
 	return row?.n ?? 0;
 }
 

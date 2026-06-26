@@ -178,7 +178,49 @@
 				name="notes"
 				class="input mt-1"
 				value={val('notes')}
-				placeholder="Setup, thesis, mistakes…"
+				placeholder="Thesis, mistakes…"
+			/>
+		</div>
+	</div>
+
+	<div class="mt-4 grid grid-cols-2 gap-4">
+		<div>
+			<label class="label" for="setupName">Setup</label>
+			<input
+				id="setupName"
+				name="setupName"
+				class="input mt-1"
+				value={val('setupName')}
+				placeholder="Opening range breakout"
+			/>
+		</div>
+		<div>
+			<label class="label" for="emotionLabel">Emotion</label>
+			<input
+				id="emotionLabel"
+				name="emotionLabel"
+				class="input mt-1"
+				value={val('emotionLabel')}
+				placeholder="Calm / FOMO / revenge"
+			/>
+		</div>
+		<div>
+			<label class="label" for="playbookId">Playbook</label>
+			<select id="playbookId" name="playbookId" class="input mt-1">
+				<option value="">— none —</option>
+				{#each data.playbooks as p (p.id)}
+					<option value={p.id} selected={val('playbookId') === p.id}>{p.name}</option>
+				{/each}
+			</select>
+		</div>
+		<div>
+			<label class="label" for="tags">Tags</label>
+			<input
+				id="tags"
+				name="tags"
+				class="input mt-1"
+				value={val('tags')}
+				placeholder="comma, separated"
 			/>
 		</div>
 	</div>

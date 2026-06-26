@@ -6,8 +6,15 @@
 	let {
 		title,
 		rows,
-		currency = 'USD'
-	}: { title: string; rows: Row[]; currency?: string } = $props();
+		currency = 'USD',
+		hrefFor
+	}: {
+		title: string;
+		rows: Row[];
+		currency?: string;
+		/** When provided, each row links to the filtered trade log (drill-down). */
+		hrefFor?: (key: string) => string;
+	} = $props();
 
 	// Flip after mount so the CSS width transition animates the bars in.
 	let shown = $state(false);
@@ -25,7 +32,14 @@
 			<div class="flex flex-col gap-2">
 				{#each rows as r, i (r.key)}
 					{@const up = r.netPnl >= 0}
-					<div class="flex items-center gap-3 text-sm">
+					<svelte:element
+						this={hrefFor ? 'a' : 'div'}
+						href={hrefFor ? hrefFor(r.key) : undefined}
+						class="flex items-center gap-3 text-sm {hrefFor
+							? 'rounded transition-opacity hover:opacity-70'
+							: ''}"
+						title={hrefFor ? `View ${r.key} trades` : undefined}
+					>
 						<span class="mono w-20 shrink-0 truncate" style="color:var(--color-text)">{r.key}</span>
 						<!-- diverging bar around a center zero line -->
 						<div class="relative h-5 flex-1 rounded" style="background:var(--color-bg-2)">
@@ -52,7 +66,7 @@
 						<span class="mono w-16 shrink-0 text-right text-xs" style="color:var(--color-faint)">
 							{r.trades > 0 ? Math.round((r.wins / r.trades) * 100) : 0}% · {r.trades}
 						</span>
-					</div>
+					</svelte:element>
 				{/each}
 			</div>
 		{/if}

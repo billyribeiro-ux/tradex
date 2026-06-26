@@ -16,7 +16,11 @@ export const manualTradeSchema = z
 		plannedStop: z.coerce.number().nonnegative().optional(),
 		plannedTarget: z.coerce.number().nonnegative().optional(),
 		confidence: z.coerce.number().int().min(1).max(10).optional(),
-		notes: z.string().max(5000).optional()
+		notes: z.string().max(5000).optional(),
+		setupName: z.string().max(80).optional(),
+		emotionLabel: z.string().max(80).optional(),
+		tags: z.string().max(300).optional(),
+		playbookId: z.string().optional()
 	})
 	// Exit price and exit time describe one event: require both or neither, so a
 	// lone exitPrice isn't silently dropped (leaving the user with an open trade).

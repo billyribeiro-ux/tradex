@@ -74,6 +74,45 @@ test('trades: create, list, filter, export, then delete', async ({ page }) => {
 	await expect(page.getByText(loss)).toHaveCount(0);
 });
 
+test('records setup/emotion/tags at creation and drills down by symbol', async ({ page }) => {
+	test.slow();
+	const s = Date.now();
+	await signUp(page, uniqueEmail('meta'));
+	const symA = `MA${s % 100000}`;
+	const symB = `MB${s % 100000}`;
+
+	// create with metadata captured up-front (no detour to the detail page)
+	const id = await createTrade(page, {
+		symbol: symA,
+		entryPrice: '100',
+		exitPrice: '110',
+		entryAt: '2026-06-01T14:30',
+		exitAt: '2026-06-01T15:30',
+		setupName: 'ORB',
+		emotionLabel: 'Calm',
+		tags: 'momentum, gap'
+	});
+	await createTrade(page, {
+		symbol: symB,
+		entryPrice: '50',
+		exitPrice: '45',
+		entryAt: '2026-06-02T14:30',
+		exitAt: '2026-06-02T15:30'
+	});
+
+	// the detail page reflects the metadata captured at creation (editable inputs)
+	await page.goto(`/trades/${id}`);
+	await expect(page.locator('input[name=setup]')).toHaveValue('ORB');
+	await expect(page.locator('input[name=emotion]')).toHaveValue('Calm');
+	await expect(page.locator('input[name=tags]')).toHaveValue(/momentum/);
+
+	// drill-down: the trade log filtered to symA shows only symA
+	await page.goto(`/trades?symbol=${symA}`);
+	await expect(page.getByText(`Filtered: symbol ${symA}`)).toBeVisible();
+	await expect(page.getByRole('link', { name: symA }).first()).toBeVisible();
+	await expect(page.getByRole('link', { name: symB })).toHaveCount(0);
+});
+
 test('dashboard, calendar, analytics, risk all render with data', async ({ page }) => {
 	test.slow();
 	const s = Date.now();

@@ -60,9 +60,19 @@
 		<BarBreakdown title="P&L by day of week" rows={data.byWeekday} currency={data.currency} />
 	</div>
 	<div use:reveal={{ delay: 0.15 }}>
-		<BarBreakdown title="P&L by asset class" rows={data.byAsset} currency={data.currency} />
+		<BarBreakdown
+			title="P&L by asset class"
+			rows={data.byAsset}
+			currency={data.currency}
+			hrefFor={(k) => `/trades?assetClass=${encodeURIComponent(k)}`}
+		/>
 	</div>
 	<div class="lg:col-span-2" use:reveal={{ delay: 0.2 }}>
-		<BarBreakdown title="Top symbols by P&L" rows={data.bySymbol} currency={data.currency} />
+		<BarBreakdown
+			title="Top symbols by P&L"
+			rows={data.bySymbol}
+			currency={data.currency}
+			hrefFor={(k) => `/trades?symbol=${encodeURIComponent(k)}`}
+		/>
 	</div>
 </div>

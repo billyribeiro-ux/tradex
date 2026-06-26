@@ -11,16 +11,29 @@
 		{ key: 'open', label: 'Open' }
 	];
 
-	// Build a page link that preserves the active status filter.
+	// Build a page link that preserves the active status + drill-down filters.
 	const pageHref = (p: number) => {
 		const u = new URLSearchParams();
 		if (data.status) u.set('status', data.status);
+		if (data.symbol) u.set('symbol', data.symbol);
+		if (data.assetClass) u.set('assetClass', data.assetClass);
+		if (data.date) u.set('date', data.date);
 		if (p > 1) u.set('page', String(p));
 		const s = u.toString();
 		return s ? `?${s}` : '?';
 	};
 	const from = $derived((data.page - 1) * data.pageSize + 1);
 	const to = $derived(Math.min(data.page * data.pageSize, data.total));
+	// A human label for an active drill-down (from analytics/calendar), if any.
+	const drill = $derived(
+		data.symbol
+			? `symbol ${data.symbol}`
+			: data.assetClass
+				? `asset ${data.assetClass}`
+				: data.date
+					? `on ${data.date}`
+					: null
+	);
 </script>
 
 <svelte:head><title>Trades · TradeX</title></svelte:head>
@@ -33,7 +46,7 @@
 	<a href="/trades/new" class="btn btn-primary">New trade</a>
 </header>
 
-<div class="mb-3 flex gap-2">
+<div class="mb-3 flex flex-wrap items-center gap-2">
 	{#each filters as f (f.key)}
 		<a
 			href={f.key ? `?status=${f.key}` : '?'}
@@ -45,6 +58,13 @@
 			{f.label}
 		</a>
 	{/each}
+	{#if drill}
+		<span class="chip" style="border-color:var(--color-brand);color:var(--color-brand)">
+			Filtered: {drill}
+			<a href="/trades" class="ml-1" style="color:var(--color-muted)" aria-label="Clear filter">✕</a
+			>
+		</span>
+	{/if}
 </div>
 
 {#if data.trades.length === 0}

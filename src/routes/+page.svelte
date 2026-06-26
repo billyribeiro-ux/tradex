@@ -26,7 +26,7 @@
 		{
 			icon: ChartLineUp,
 			title: 'Metrics that matter',
-			body: 'Win rate, profit factor, expectancy, R-multiple, MFE/MAE and a live equity curve — computed in integer money, no float drift.'
+			body: 'Win rate, profit factor, expectancy, R-multiple, max drawdown and a live equity curve — computed in integer money, no float drift.'
 		},
 		{
 			icon: CalendarBlank,

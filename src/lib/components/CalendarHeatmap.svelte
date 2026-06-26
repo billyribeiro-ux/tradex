@@ -79,9 +79,14 @@
 			{#each grid as col, ci (ci)}
 				<div class="flex flex-col" style="gap:{GAP}px">
 					{#each col as cell, ri (cell.date)}
-						<div
-							role="presentation"
-							class="rounded-[3px] transition-transform duration-100 hover:scale-125"
+						<svelte:element
+							this={cell.day ? 'a' : 'div'}
+							href={cell.day ? `/trades?date=${cell.date}` : undefined}
+							role={cell.day ? undefined : 'presentation'}
+							aria-label={cell.day
+								? `${cell.date}: ${cell.day.trades} trade${cell.day.trades === 1 ? '' : 's'}`
+								: undefined}
+							class="block rounded-[3px] transition-transform duration-100 hover:scale-125"
 							style="width:{CELL}px;height:{CELL}px;background:{cellColor(cell.day)};outline:{tip &&
 							tip.col === ci &&
 							tip.row === ri
@@ -89,7 +94,7 @@
 								: 'none'}"
 							onpointerenter={() => (tip = { col: ci, row: ri, day: cell.day, date: cell.date })}
 							onpointerleave={() => (tip = null)}
-						></div>
+						></svelte:element>
 					{/each}
 				</div>
 			{/each}

@@ -3,7 +3,9 @@ import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { manualTradeSchema } from '$lib/schemas/trade';
 import { addManualTrade } from '$lib/server/services/trades';
+import { applyCategorization } from '$lib/server/services/categorization';
 import { getAccount, resolveAccount } from '$lib/server/services/accounts';
+import { listPlaybooks } from '$lib/server/services/playbooks';
 import { toScaled } from '$lib/money';
 import { fromDatetimeLocal } from '$lib/format';
 import type { Actions, PageServerLoad } from './$types';
@@ -11,7 +13,11 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { accountId } = await parent();
 	const account = accountId && locals.user ? await getAccount(db, locals.user.id, accountId) : null;
-	return { assetClasses: account?.assetClasses ?? ['stock'] };
+	const playbooks = locals.user ? await listPlaybooks(db, locals.user.id) : [];
+	return {
+		assetClasses: account?.assetClasses ?? ['stock'],
+		playbooks: playbooks.map((p) => ({ id: p.id, name: p.name }))
+	};
 };
 
 export const actions: Actions = {
@@ -48,8 +54,22 @@ export const actions: Actions = {
 			plannedStop: v.plannedStop != null ? toScaled(v.plannedStop) : null,
 			plannedTarget: v.plannedTarget != null ? toScaled(v.plannedTarget) : null,
 			confidence: v.confidence ?? null,
+			playbookId: v.playbookId || null,
 			notes: v.notes ?? null
 		});
+
+		// Capture setup/emotion/tags at the moment of logging (don't make the
+		// trader open the detail page to record their intent).
+		if (v.setupName || v.emotionLabel || v.tags) {
+			await applyCategorization(db, locals.user.id, id, {
+				setupName: v.setupName?.trim() || null,
+				emotionLabel: v.emotionLabel?.trim() || null,
+				tagNames: (v.tags ?? '')
+					.split(',')
+					.map((t) => t.trim())
+					.filter(Boolean)
+			});
+		}
 
 		redirect(303, `/trades/${id}`);
 	}

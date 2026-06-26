@@ -56,6 +56,9 @@ export interface TradeInput {
 	entryAt?: string;
 	exitPrice?: string;
 	exitAt?: string;
+	setupName?: string;
+	emotionLabel?: string;
+	tags?: string;
 }
 
 /**
@@ -76,6 +79,9 @@ export async function createTrade(page: Page, t: TradeInput): Promise<string> {
 	await page.fill('input[name=entryAt]', t.entryAt ?? '2026-06-01T14:30');
 	if (t.exitPrice !== undefined) await page.fill('input[name=exitPrice]', t.exitPrice);
 	if (t.exitAt !== undefined) await page.fill('input[name=exitAt]', t.exitAt);
+	if (t.setupName !== undefined) await page.fill('input[name=setupName]', t.setupName);
+	if (t.emotionLabel !== undefined) await page.fill('input[name=emotionLabel]', t.emotionLabel);
+	if (t.tags !== undefined) await page.fill('input[name=tags]', t.tags);
 
 	await page.click('button[type=submit]');
 	await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 20000 });
