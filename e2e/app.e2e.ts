@@ -217,3 +217,44 @@ test('playbooks: create and delete', async ({ page }) => {
 	await page.locator('form[action="?/delete"]').last().locator('button').click();
 	await expect(page.getByText('Opening Range Breakout')).toHaveCount(0, { timeout: 10000 });
 });
+
+test('categories: list with usage, rename a tag, delete a setup', async ({ page }) => {
+	test.slow();
+	await signUp(page, uniqueEmail('cat'));
+	await createTrade(page, {
+		symbol: 'CATX',
+		entryPrice: '100',
+		exitPrice: '110',
+		entryAt: '2026-06-01T14:30',
+		exitAt: '2026-06-01T15:30',
+		setupName: 'ScalpX',
+		tags: 'breakout'
+	});
+
+	await page.goto('/categories');
+	await waitForHydration(page);
+	// a fresh user has exactly one setup + one tag from the trade above
+	// (Svelte sets the input value as a property, so assert with toHaveValue)
+	const setupInput = page.locator('form[action="?/renameSetup"] input[name=name]');
+	const tagInput = page.locator('form[action="?/renameTag"] input[name=name]');
+	await expect(setupInput).toHaveValue('ScalpX');
+	await expect(tagInput).toHaveValue('breakout');
+
+	// rename the tag
+	await tagInput.fill('breakout2');
+	await Promise.all([
+		page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/categories')),
+		page.locator('form[action="?/renameTag"] button[type=submit]').click()
+	]);
+	await page.goto('/categories');
+	await expect(page.locator('form[action="?/renameTag"] input[name=name]')).toHaveValue('breakout2');
+
+	// delete the setup → the setups section is empty
+	page.on('dialog', (d) => d.accept());
+	await Promise.all([
+		page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/categories')),
+		page.locator('form[action="?/deleteSetup"]').first().locator('button[type=submit]').click()
+	]);
+	await page.goto('/categories');
+	await expect(page.locator('form[action="?/renameSetup"]')).toHaveCount(0);
+});

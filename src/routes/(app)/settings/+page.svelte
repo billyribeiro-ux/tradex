@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { DownloadSimple, Sparkle, ShieldCheck, CheckCircle } from 'phosphor-svelte';
+	import { DownloadSimple, Sparkle, ShieldCheck, CheckCircle, Tag } from 'phosphor-svelte';
 	let { data, form } = $props();
 </script>
 
@@ -39,6 +39,16 @@
 					><DownloadSimple size={16} /> Export JSON</a
 				>
 			</div>
+		</div>
+	</div>
+
+	<div class="panel">
+		<div class="panel-h"><span class="panel-t">Categorization</span></div>
+		<div class="flex items-center justify-between p-5">
+			<p class="text-sm" style="color:var(--color-muted)">
+				Rename, merge or delete the tags, setups and emotions across your trades.
+			</p>
+			<a href="/categories" class="btn btn-ghost shrink-0"><Tag size={16} /> Manage</a>
 		</div>
 	</div>
 
