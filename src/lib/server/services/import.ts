@@ -29,7 +29,8 @@ function assertCsvSize(csvText: string, rowCount?: number) {
 
 export interface RowError {
 	row: number;
-	messages: string[];
+	/** Per-field failures so the UI can name the offending column, not just the message. */
+	fields: { field: string; message: string }[];
 }
 
 export interface ImportResult {
@@ -102,7 +103,11 @@ export async function importCsv(
 	parsed.data.forEach((raw, i) => {
 		const mapped = mapRow(raw, mapping, opts.timezone ?? 'UTC');
 		if (!mapped.ok) {
-			errors.push({ row: i + 2, messages: mapped.errors.map((e) => e.message) }); // +2: header + 1-index
+			// +2: header row + 1-indexing
+			errors.push({
+				row: i + 2,
+				fields: mapped.errors.map((e) => ({ field: e.field, message: e.message }))
+			});
 			return;
 		}
 		const v = mapped.value;

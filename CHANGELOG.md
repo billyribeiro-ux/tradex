@@ -57,10 +57,40 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 - **Desktop (Tauri 2)** — `src-tauri/` shell (resolves to `tauri` 2.11.3, Cargo.lock committed,
   icon set generated); `pnpm tauri:dev` wraps the live app, `pnpm tauri:build` packages the
   `ADAPTER=static` SPA. (Offline data layer lands with Phase 3/4.)
-- **Tests** — 69 unit/integration passing + a Playwright E2E happy-path (signup → trade → log),
-  wired into CI alongside lint, typecheck, and build. CI via GitHub Actions.
+- **Tests** — 91 unit/integration passing + a Playwright E2E suite (happy-path plus feature
+  coverage: trade CRUD, export, multi-tenant isolation, accounts, coach states, playbooks, trade
+  metadata capture and analytics drill-down), wired into CI alongside lint, typecheck, build, and a
+  screenshot-capture job. CI via GitHub Actions.
+
+### Fixed (correctness audit)
+
+- **Timezone integrity, end to end.** Accounts now have a timezone picker (create + edit); CSV import
+  interprets naive broker timestamps in that zone instead of stamping them UTC (DST-correct), and
+  tz-named strings like "… EDT" are no longer mis-parsed; the calendar view buckets days in the
+  account zone like the dashboard already did. Previously every account was silently UTC.
+- **Forgiving import, hardened.** Reject non-positive prices (were only null-checked); per-row errors
+  now name the offending column; 10 MB / 100k-row guardrails return a friendly error instead of
+  risking a memory/timeout DoS.
+- **Prop-firm engine.** Removed the unimplemented "EOD" drawdown type that silently behaved as
+  static; the consistency rule stays visible (not dropped) before an account is net-profitable.
+- **Trade entry.** Capture setup, emotion, tags and a playbook at logging time (no detour to the
+  detail page); require exit price and exit time together so a lone exit can't silently log an open
+  trade.
+- **Display.** Trade log honours the account's base currency (was hardcoded USD); dashboard shows
+  "avg win / —" when there are no losses.
+
+### Changed
+
+- **Analytics & calendar drill-down.** Symbol/asset-class bars and calendar day cells now link into a
+  filtered trade log (by `?symbol` / `?assetClass` / `?date`), with an active-filter chip.
+- Landing copy no longer advertises MFE/MAE (true excursion needs an intrabar price feed the app
+  doesn't ingest yet; the schema columns remain reserved).
 
 ### Deferred (next phases)
+
+- MFE/MAE + exit-efficiency (need an intrabar/tick price feed); saved import column-mapping templates;
+  tag/setup/emotion management UI; share links; multi-leg options grouping. (Schema is already in
+  place for these.)
 
 - JWT/JWKS + bearer auth (added in Phase 3 for the Rust/Axum API and Tauri desktop).
 - Multi-leg options analytics; alt-exit backtest simulation.

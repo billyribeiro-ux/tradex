@@ -95,7 +95,16 @@
 								{#each r.errors as e (e.row)}
 									<tr>
 										<td class="mono align-top" style="color:var(--color-faint)">row {e.row}</td>
-										<td class="text-left">{e.messages.join('; ')}</td>
+										<td class="text-left">
+											{#each e.fields as f, i (i)}
+												<span
+													><span class="mono" style="color:var(--color-muted)">{f.field}</span>: {f.message}{i <
+													e.fields.length - 1
+														? '; '
+														: ''}</span
+												>
+											{/each}
+										</td>
 									</tr>
 								{/each}
 							</tbody>
