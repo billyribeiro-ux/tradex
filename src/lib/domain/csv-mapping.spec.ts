@@ -27,6 +27,19 @@ describe('detectColumns', () => {
 		const used = Object.values(map);
 		expect(new Set(used).size).toBe(used.length);
 	});
+
+	it('does not let the short token "id" substring-steal Bid/Mid columns', () => {
+		const map = detectColumns(['Symbol', 'Side', 'Qty', 'Bid', 'Mid', 'Date', 'Execution ID']);
+		// "Bid"/"Mid" contain "id" but must NOT be read as the broker exec id;
+		// the explicit "Execution ID" should win.
+		expect(map.brokerExecId).toBe('Execution ID');
+		expect(map.price).not.toBe('Bid');
+	});
+
+	it('still matches a plain "ID" header exactly', () => {
+		const map = detectColumns(['Symbol', 'Side', 'Qty', 'Price', 'Date', 'ID']);
+		expect(map.brokerExecId).toBe('ID');
+	});
 });
 
 describe('normalizeSide', () => {

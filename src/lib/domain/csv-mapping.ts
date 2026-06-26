@@ -80,11 +80,15 @@ export function detectColumns(headers: readonly string[]): ColumnMap {
 
 	for (const target of Object.keys(SYNONYMS) as FieldTarget[]) {
 		const syns = SYNONYMS[target];
-		// 1) exact normalized match, then 2) header contains a synonym (longest first)
+		// 1) exact normalized match, then 2) substring match — but only for
+		// synonyms >= 4 chars, so a short token like 'id' can't steal "Bid"/"Mid"
+		// via substring (it still matches "ID" exactly in pass 1).
 		const found =
 			normed.find((h) => !used.has(h.raw) && syns.includes(h.n)) ??
 			normed.find(
-				(h) => !used.has(h.raw) && syns.some((s) => h.n === s || h.n.includes(s) || s.includes(h.n))
+				(h) =>
+					!used.has(h.raw) &&
+					syns.some((s) => s.length >= 4 && (h.n.includes(s) || s.includes(h.n)))
 			);
 		if (found) {
 			map[target] = found.raw;
