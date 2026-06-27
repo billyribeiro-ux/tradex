@@ -177,18 +177,21 @@ export async function renameTag(
 		.where(and(eq(tag.userId, userId), eq(tag.name, name)))
 		.limit(1);
 	if (target && target.id !== id) {
-		const rows = await db
-			.select({ tradeId: tradeTag.tradeId })
-			.from(tradeTag)
-			.where(eq(tradeTag.tagId, id));
-		if (rows.length) {
-			await db
-				.insert(tradeTag)
-				.values(rows.map((r) => ({ tradeId: r.tradeId, tagId: target.id })))
-				.onConflictDoNothing();
-		}
-		await db.delete(tradeTag).where(eq(tradeTag.tagId, id));
-		await db.delete(tag).where(eq(tag.id, id));
+		// Atomic merge: re-point associations then drop the source, all-or-nothing.
+		await db.transaction(async (tx) => {
+			const rows = await tx
+				.select({ tradeId: tradeTag.tradeId })
+				.from(tradeTag)
+				.where(eq(tradeTag.tagId, id));
+			if (rows.length) {
+				await tx
+					.insert(tradeTag)
+					.values(rows.map((r) => ({ tradeId: r.tradeId, tagId: target.id })))
+					.onConflictDoNothing();
+			}
+			await tx.delete(tradeTag).where(eq(tradeTag.tagId, id));
+			await tx.delete(tag).where(eq(tag.id, id));
+		});
 		return { ok: true, merged: true };
 	}
 	await db
@@ -227,8 +230,10 @@ export async function renameSetup(
 		.where(and(eq(setup.userId, userId), eq(setup.name, name)))
 		.limit(1);
 	if (target && target.id !== id) {
-		await db.update(trade).set({ setupId: target.id }).where(eq(trade.setupId, id));
-		await db.delete(setup).where(eq(setup.id, id));
+		await db.transaction(async (tx) => {
+			await tx.update(trade).set({ setupId: target.id }).where(eq(trade.setupId, id));
+			await tx.delete(setup).where(eq(setup.id, id));
+		});
 		return { ok: true, merged: true };
 	}
 	await db
@@ -267,8 +272,10 @@ export async function renameEmotion(
 		.where(and(eq(emotion.userId, userId), eq(emotion.label, label)))
 		.limit(1);
 	if (target && target.id !== id) {
-		await db.update(trade).set({ emotionId: target.id }).where(eq(trade.emotionId, id));
-		await db.delete(emotion).where(eq(emotion.id, id));
+		await db.transaction(async (tx) => {
+			await tx.update(trade).set({ emotionId: target.id }).where(eq(trade.emotionId, id));
+			await tx.delete(emotion).where(eq(emotion.id, id));
+		});
 		return { ok: true, merged: true };
 	}
 	await db

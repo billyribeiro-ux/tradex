@@ -222,12 +222,25 @@ export function parseDecimal(raw: string): number | null {
  * place). The ISO detection is anchored to `YYYY-MM-DD` so tz-named strings
  * like "... EDT" (which contain a 'T') aren't mis-detected as ISO.
  */
+// Sane bounds for a trade timestamp; anything outside is rejected (→ row error)
+// rather than silently accepted, so a stray numeric in the date column doesn't
+// become a year-2255 trade.
+const EPOCH_MIN = Date.UTC(2000, 0, 1);
+const EPOCH_MAX = Date.UTC(2100, 0, 1);
+const plausible = (ms: number) => ms >= EPOCH_MIN && ms < EPOCH_MAX;
+
 export function parseTimestamp(raw: string, timezone = 'UTC'): number | null {
 	if (!raw) return null;
 	const s = raw.trim();
-	// epoch seconds / ms
-	if (/^\d{10}$/.test(s)) return Number(s) * 1000;
-	if (/^\d{13}$/.test(s)) return Number(s);
+	// epoch seconds / ms — only when the result is a plausible trade date
+	if (/^\d{10}$/.test(s)) {
+		const ms = Number(s) * 1000;
+		return plausible(ms) ? ms : null;
+	}
+	if (/^\d{13}$/.test(s)) {
+		const ms = Number(s);
+		return plausible(ms) ? ms : null;
+	}
 
 	// Anchored ISO-ish date or datetime with an optional offset designator.
 	const m = s.match(

@@ -42,11 +42,19 @@ export async function saveMappingTemplate(
 ): Promise<string> {
 	const name = input.name.trim() || 'Untitled';
 	const broker = input.broker.trim() || 'Broker';
-	// replace a same-named template so re-saving updates rather than duplicates
+	// Replace an identically-named template FOR THE SAME BROKER so re-saving
+	// updates rather than duplicates — but the same name under a different broker
+	// is a distinct template (never clobbered).
 	const [existing] = await db
 		.select({ id: importMappingTemplate.id })
 		.from(importMappingTemplate)
-		.where(and(eq(importMappingTemplate.userId, userId), eq(importMappingTemplate.name, name)))
+		.where(
+			and(
+				eq(importMappingTemplate.userId, userId),
+				eq(importMappingTemplate.name, name),
+				eq(importMappingTemplate.broker, broker)
+			)
+		)
 		.limit(1);
 	if (existing) {
 		await db

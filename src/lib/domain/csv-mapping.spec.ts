@@ -101,9 +101,13 @@ describe('parseTimestamp', () => {
 		expect(parseTimestamp('2026-06-24')).toBe(Date.UTC(2026, 5, 24, 0, 0, 0));
 		expect(parseTimestamp('2026-06-24', 'America/New_York')).toBe(Date.UTC(2026, 5, 24, 0, 0, 0));
 	});
-	it('parses epoch seconds and ms', () => {
+	it('parses epoch seconds and ms within a plausible range', () => {
 		expect(parseTimestamp('1700000000')).toBe(1700000000 * 1000);
 		expect(parseTimestamp('1700000000000')).toBe(1700000000000);
+	});
+	it('rejects an implausible bare number as a date (→ row error)', () => {
+		expect(parseTimestamp('9999999999')).toBeNull(); // 10 digits → year 2286
+		expect(parseTimestamp('9999999999999')).toBeNull(); // 13 digits → year 2286
 	});
 	it('returns null for garbage', () => {
 		expect(parseTimestamp('not a date')).toBeNull();

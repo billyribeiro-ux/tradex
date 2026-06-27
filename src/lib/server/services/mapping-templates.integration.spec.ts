@@ -53,6 +53,16 @@ describe('import mapping templates', () => {
 		expect(list).toHaveLength(1);
 		expect(list[0]!.columnMap.fee).toBe('Comm');
 
+		// the SAME name under a DIFFERENT broker is a distinct template, not a clobber
+		const id3 = await saveMappingTemplate(db, USER, {
+			broker: 'OtherBroker',
+			name: 'My broker',
+			columnMap: map
+		});
+		expect(id3).not.toBe(id);
+		expect(await listMappingTemplates(db, USER)).toHaveLength(2);
+		await deleteMappingTemplate(db, USER, id3);
+
 		const got = await getMappingTemplate(db, USER, id);
 		expect(got?.broker).toBe('Wonkybroker');
 

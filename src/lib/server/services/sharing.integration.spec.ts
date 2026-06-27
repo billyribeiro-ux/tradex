@@ -59,8 +59,20 @@ describe('trade sharing', () => {
 		const shared = await getSharedTrade(db, token);
 		expect(shared?.netPnl).toBeNull();
 		expect(shared?.qty).toBeNull();
-		expect(shared?.avgEntry).toBeGreaterThan(0); // prices are not "size"
+		// hidePnl must hide the whole OUTCOME, not just the dollar figure —
+		// the R-multiple and exit price would otherwise reveal it.
+		expect(shared?.rMultiple).toBeNull();
+		expect(shared?.avgExit).toBeNull();
+		expect(shared?.avgEntry).toBeGreaterThan(0); // the entry/thesis still shows
 		expect(shared?.scope).toEqual({ hideSize: true, hidePnl: true });
+	});
+
+	it('keeps the outcome visible when nothing is hidden', async () => {
+		const res = await createTradeShare(db, USER, tradeId);
+		const shared = await getSharedTrade(db, (res as { token: string }).token);
+		expect(shared?.rMultiple).not.toBeNull();
+		expect(shared?.avgExit).not.toBeNull();
+		expect(shared?.netPnl).not.toBeNull();
 	});
 
 	it('returns null for an expired link', async () => {

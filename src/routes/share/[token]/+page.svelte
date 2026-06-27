@@ -47,16 +47,18 @@
 						{formatMoney(s.netPnl, s.currency, { signed: true })}
 					</div>
 				</div>
-			{:else}
+			{:else if s.rMultiple != null}
 				<div class="text-right">
 					<div class="label">Result</div>
 					<div
 						class="kpi-val text-2xl font-bold"
-						style="color:{(s.rMultiple ?? 0) >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
+						style="color:{s.rMultiple >= 0 ? 'var(--color-up)' : 'var(--color-down)'}"
 					>
-						{s.rMultiple != null ? `${formatRatio(s.rMultiple)}R` : '—'}
+						{formatRatio(s.rMultiple)}R
 					</div>
 				</div>
+			{:else}
+				<span class="chip" title="the owner kept the result private">Result hidden</span>
 			{/if}
 		</div>
 

@@ -92,6 +92,7 @@ export async function getSharedTrade(db: DB, token: string): Promise<SharedTrade
 	if (row.link.expiresAt != null && row.link.expiresAt < Date.now()) return null; // expired
 
 	const scope: ShareScope = row.link.scope ?? {};
+	const hidePnl = !!scope.hidePnl;
 	const cat = await getTradeCategorization(db, row.trade.id);
 	return {
 		symbol: row.instrument.symbol,
@@ -102,11 +103,14 @@ export async function getSharedTrade(db: DB, token: string): Promise<SharedTrade
 		closedAt: row.trade.closedAt,
 		holdMs: row.trade.holdMs,
 		currency: row.currency,
-		rMultiple: row.trade.rMultiple,
 		avgEntry: row.trade.avgEntry,
-		avgExit: row.trade.avgExit,
+		// hidePnl hides the OUTCOME, not just the headline dollar figure: the
+		// R-multiple is the normalised P&L and the exit price reveals it too, so
+		// both are withheld alongside netPnl (the entry/thesis still shows).
+		rMultiple: hidePnl ? null : row.trade.rMultiple,
+		avgExit: hidePnl ? null : row.trade.avgExit,
+		netPnl: hidePnl ? null : row.trade.netPnl,
 		qty: scope.hideSize ? null : row.trade.qtyOpened,
-		netPnl: scope.hidePnl ? null : row.trade.netPnl,
 		notes: row.trade.notes,
 		setupName: cat.setupName,
 		emotionLabel: cat.emotionLabel,
