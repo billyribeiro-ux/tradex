@@ -416,6 +416,10 @@ test('options: log a multi-leg bull call spread with classification + defined ri
 	await expect(page.getByText('+$100.00').first()).toBeVisible(); // +$300 long − $200 short
 	await expect(page.getByText('$700.00').first()).toBeVisible(); // max profit
 
+	// The payoff-at-expiry diagram renders, and the break-even (250 + $3 debit = $253) shows.
+	await expect(page.getByRole('img', { name: 'Payoff at expiry' })).toBeVisible();
+	await expect(page.getByText('$253.00')).toBeVisible();
+
 	// Each leg links back to the structure.
 	await page.getByRole('link', { name: 'Call' }).first().click();
 	await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 20000 });

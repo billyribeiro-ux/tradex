@@ -5,6 +5,8 @@ import { addManualTrade, deleteTrade } from './trades';
 import {
 	classifySpread,
 	spreadRisk,
+	payoffCurve,
+	type PayoffCurve,
 	type SpreadClassification,
 	type SpreadLeg,
 	type SpreadRisk
@@ -115,6 +117,9 @@ export interface MultiLegGroupDetail {
 	legs: MultiLegLeg[];
 	classification: SpreadClassification;
 	risk: SpreadRisk;
+	/** Expiry payoff curve + break-evens — null for multi-expiry (calendar/diagonal)
+	 * structures, where an at-expiry diagram would be misleading. */
+	payoff: PayoffCurve | null;
 	realized: {
 		grossPnl: number;
 		netPnl: number;
@@ -176,11 +181,16 @@ export async function getMultiLegGroup(
 	const closedAt =
 		status === 'closed' ? Math.max(...legs.map((l) => l.trade.closedAt ?? l.trade.openedAt)) : null;
 
+	// A payoff-at-expiry diagram only makes sense when every leg expires together;
+	// for calendars/diagonals the back-month still has value at the front expiry.
+	const singleExpiry = spreadLegs.every((l) => l.expiry === spreadLegs[0]!.expiry);
+
 	return {
 		group,
 		legs,
 		classification: classifySpread(spreadLegs),
 		risk: spreadRisk(spreadLegs),
+		payoff: singleExpiry ? payoffCurve(spreadLegs) : null,
 		realized: { grossPnl, netPnl, fees, status, openedAt, closedAt }
 	};
 }

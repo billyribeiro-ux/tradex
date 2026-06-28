@@ -235,3 +235,104 @@ export function spreadRisk(legs: SpreadLeg[]): SpreadRisk {
 
 	return { net, kind, maxProfit, maxLoss };
 }
+
+// ---------------------------------------------------------------------------
+// Payoff at expiry (P&L vs underlying price) + break-evens
+// ---------------------------------------------------------------------------
+
+/** Per-share intrinsic value of one leg at an underlying price (scaled). */
+function intrinsic(leg: SpreadLeg, priceScaled: number): number {
+	return leg.type === 'call'
+		? Math.max(priceScaled - leg.strike, 0)
+		: Math.max(leg.strike - priceScaled, 0);
+}
+
+/**
+ * Total structure P&L at expiry for a given underlying price (scaled). Each leg
+ * settles to its intrinsic value; a long leg nets that against the premium paid,
+ * a short leg against the premium received, all times qty × the 100 multiplier.
+ */
+export function payoffAt(legs: SpreadLeg[], priceScaled: number): number {
+	let total = 0;
+	for (const leg of legs) {
+		const perShare = intrinsic(leg, priceScaled) - leg.entryPremium;
+		const value = Math.round(perShare * fromScaled(leg.qty) * CONTRACT_MULTIPLIER);
+		total += isBuy(leg) ? value : -value;
+	}
+	return total;
+}
+
+export interface PayoffPoint {
+	/** scaled underlying price */ x: number;
+	/** scaled P&L at expiry */ y: number;
+}
+
+export interface PayoffCurve {
+	points: PayoffPoint[];
+	/** scaled underlying prices where P&L crosses zero */
+	breakevens: number[];
+	/** scaled [min, max] underlying price domain sampled */
+	domain: [number, number];
+	/** scaled P&L extremes over the sampled domain */
+	minPnl: number;
+	maxPnl: number;
+}
+
+/**
+ * Sample the structure's expiry payoff across a price domain padded around the
+ * strikes. The payoff is piecewise-linear with kinks only at the strikes, so the
+ * sample set includes every strike — segments between samples are then exactly
+ * linear and zero-crossings (break-evens) interpolate precisely.
+ */
+export function payoffCurve(legs: SpreadLeg[], steps = 96): PayoffCurve {
+	const strikes = [...new Set(legs.map((l) => l.strike))].sort((a, b) => a - b);
+	const lo = strikes[0] ?? 0;
+	const hi = strikes[strikes.length - 1] ?? lo;
+	// Pad the domain so the flat tails and break-evens are visible even for a
+	// single-strike structure (straddle), where hi === lo.
+	const pad = Math.max((hi - lo) * 0.6, hi * 0.15, fromScaled(1) /* $1 floor */);
+	const min = Math.max(0, Math.round(lo - pad));
+	const max = Math.round(hi + pad);
+
+	const xs = new Set<number>();
+	for (let i = 0; i <= steps; i++) xs.add(Math.round(min + ((max - min) * i) / steps));
+	for (const k of strikes) xs.add(k);
+	const sorted = [...xs].sort((a, b) => a - b);
+	const points = sorted.map((x) => ({ x, y: payoffAt(legs, x) }));
+
+	const breakevens: number[] = [];
+	for (let i = 1; i < points.length; i++) {
+		const p0 = points[i - 1]!;
+		const p1 = points[i]!;
+		if (p0.y === 0) breakevens.push(p0.x);
+		else if (p0.y < 0 !== p1.y < 0) {
+			// linear interpolate the zero crossing (exact: no kink between samples)
+			const t = p0.y / (p0.y - p1.y);
+			breakevens.push(Math.round(p0.x + t * (p1.x - p0.x)));
+		}
+	}
+	const last = points[points.length - 1];
+	if (last && last.y === 0) breakevens.push(last.x);
+
+	// de-duplicate near-identical crossings
+	const unique: number[] = [];
+	for (const b of breakevens.sort((a, b) => a - b)) {
+		if (unique.length === 0 || Math.abs(b - unique[unique.length - 1]!) > fromScaled(0.01)) {
+			unique.push(b);
+		}
+	}
+
+	const ys = points.map((p) => p.y);
+	return {
+		points,
+		breakevens: unique,
+		domain: [min, max],
+		minPnl: Math.min(...ys),
+		maxPnl: Math.max(...ys)
+	};
+}
+
+/** Break-even underlying price(s) of a structure (scaled), low → high. */
+export function breakevenPrices(legs: SpreadLeg[]): number[] {
+	return payoffCurve(legs).breakevens;
+}

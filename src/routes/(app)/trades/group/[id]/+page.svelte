@@ -3,6 +3,7 @@
 	import { formatMoney, fromScaled } from '$lib/money';
 	import { formatDate, formatDateTime } from '$lib/format';
 	import { reveal } from '$lib/motion';
+	import PayoffDiagram from '$lib/components/PayoffDiagram.svelte';
 	import { Trash } from 'phosphor-svelte';
 
 	let { data } = $props();
@@ -10,6 +11,12 @@
 	const cur = $derived(data.currency);
 	// contract labels are "AAPL 190C 18SEP26" — the underlying is the first token.
 	const underlying = $derived(d.legs[0]?.instrument.symbol.split(' ')[0] ?? '');
+	const strikes = $derived(d.legs.map((l) => l.contract.strike));
+	const breakevenText = $derived(
+		d.payoff && d.payoff.breakevens.length
+			? d.payoff.breakevens.map((b) => formatMoney(b, cur)).join(' / ')
+			: '—'
+	);
 </script>
 
 <svelte:head><title>{d.classification.label} · TradeX</title></svelte:head>
@@ -63,7 +70,7 @@
 </div>
 
 <!-- Entry-time risk profile, derived from the legs -->
-<div class="grid grid-cols-2 gap-3 sm:grid-cols-4" use:reveal>
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" use:reveal>
 	{#snippet cell(label: string, value: string, color = 'var(--color-text)')}
 		<div class="panel p-3">
 			<div class="label">{label}</div>
@@ -84,8 +91,23 @@
 		d.risk.maxLoss != null ? formatMoney(d.risk.maxLoss, cur) : 'Undefined',
 		'var(--color-down)'
 	)}
+	{@render cell('Break-even', breakevenText, 'var(--color-brand)')}
 	{@render cell('Fees', formatMoney(d.realized.fees, cur))}
 </div>
+
+{#if d.payoff}
+	<div class="panel mt-3" use:reveal={{ delay: 0.04 }}>
+		<div class="panel-h">
+			<span class="panel-t">Payoff at expiry</span>
+			<span class="mono text-xs" style="color:var(--color-faint)"
+				>green = profit · red = loss · dashed = strikes</span
+			>
+		</div>
+		<div class="p-3">
+			<PayoffDiagram curve={d.payoff} {strikes} currency={cur} />
+		</div>
+	</div>
+{/if}
 
 <div class="panel mt-3" use:reveal={{ delay: 0.05 }}>
 	<div class="panel-h">

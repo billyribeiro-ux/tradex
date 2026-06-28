@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { classifySpread, netDebitCredit, spreadRisk, type SpreadLeg } from './spreads';
+import {
+	classifySpread,
+	netDebitCredit,
+	spreadRisk,
+	payoffAt,
+	payoffCurve,
+	breakevenPrices,
+	type SpreadLeg
+} from './spreads';
 import { toScaled, fromScaled } from '$lib/money';
 
 const EXP1 = Date.UTC(2026, 8, 18); // 18 SEP 2026
@@ -224,5 +232,74 @@ describe('spreadRisk', () => {
 		]);
 		expect(r.maxProfit).toBeNull();
 		expect(r.maxLoss).toBeNull();
+	});
+});
+
+describe('payoffAt', () => {
+	const bullCall = [
+		leg({ type: 'call', side: 'buy', strike: 100, entryPremium: toScaled(5) }),
+		leg({ type: 'call', side: 'sell', strike: 110, entryPremium: toScaled(2) })
+	];
+
+	it('is max loss below both strikes and max profit above both (bull call)', () => {
+		expect(fromScaled(payoffAt(bullCall, toScaled(90)))).toBe(-300); // net debit lost
+		expect(fromScaled(payoffAt(bullCall, toScaled(120)))).toBe(700); // width − debit
+	});
+
+	it('is zero at the break-even price (strike + net debit per share)', () => {
+		expect(fromScaled(payoffAt(bullCall, toScaled(103)))).toBe(0);
+	});
+});
+
+describe('breakevenPrices', () => {
+	it('finds the single break-even of a vertical', () => {
+		const be = breakevenPrices([
+			leg({ type: 'call', side: 'buy', strike: 100, entryPremium: toScaled(5) }),
+			leg({ type: 'call', side: 'sell', strike: 110, entryPremium: toScaled(2) })
+		]);
+		expect(be.map(fromScaled)).toEqual([103]);
+	});
+
+	it('finds both break-evens of a long straddle (strike ± premium)', () => {
+		const be = breakevenPrices([
+			leg({ type: 'call', side: 'buy', strike: 100, entryPremium: toScaled(5) }),
+			leg({ type: 'put', side: 'buy', strike: 100, entryPremium: toScaled(4) })
+		]);
+		expect(be.map(fromScaled)).toEqual([91, 109]);
+	});
+
+	it('finds both break-evens of a credit iron condor (inside the short strikes)', () => {
+		// sell 90P/110C, buy 80P/120C, net credit $1/share → BE 89 and 111
+		const be = breakevenPrices([
+			leg({ type: 'put', side: 'buy', strike: 80, entryPremium: toScaled(0.5) }),
+			leg({ type: 'put', side: 'sell', strike: 90, entryPremium: toScaled(1) }),
+			leg({ type: 'call', side: 'sell', strike: 110, entryPremium: toScaled(1) }),
+			leg({ type: 'call', side: 'buy', strike: 120, entryPremium: toScaled(0.5) })
+		]);
+		expect(be.map(fromScaled)).toEqual([89, 111]);
+	});
+});
+
+describe('payoffCurve', () => {
+	const bullCall = [
+		leg({ type: 'call', side: 'buy', strike: 100, entryPremium: toScaled(5) }),
+		leg({ type: 'call', side: 'sell', strike: 110, entryPremium: toScaled(2) })
+	];
+
+	it('samples a monotone-ish curve including the strikes as kinks', () => {
+		const c = payoffCurve(bullCall);
+		const xs = c.points.map((p) => fromScaled(p.x));
+		expect(xs).toContain(100);
+		expect(xs).toContain(110);
+		// domain brackets the strikes and P&L extremes match the defined risk
+		expect(fromScaled(c.minPnl)).toBe(-300);
+		expect(fromScaled(c.maxPnl)).toBe(700);
+		expect(c.breakevens.map(fromScaled)).toEqual([103]);
+	});
+
+	it('is piecewise-linear: midpoint equals the average of its segment ends', () => {
+		// between strikes 100 and 110 the payoff is a straight line
+		const at = (price: number) => fromScaled(payoffAt(bullCall, toScaled(price)));
+		expect(at(105)).toBe((at(100) + at(110)) / 2);
 	});
 });

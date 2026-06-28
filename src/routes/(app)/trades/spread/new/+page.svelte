@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { classifySpread, spreadRisk, type SpreadLeg } from '$lib/domain/spreads';
+	import { classifySpread, spreadRisk, breakevenPrices, type SpreadLeg } from '$lib/domain/spreads';
 	import { toScaled, formatMoney } from '$lib/money';
 	import { Plus, Trash } from 'phosphor-svelte';
 
@@ -86,7 +86,14 @@
 	);
 	const preview = $derived(
 		parsedLegs.length === legs.length && legs.length >= 2
-			? { cls: classifySpread(parsedLegs), risk: spreadRisk(parsedLegs) }
+			? {
+					cls: classifySpread(parsedLegs),
+					risk: spreadRisk(parsedLegs),
+					// Break-evens only when every leg shares an expiry (an at-expiry notion).
+					breakevens: parsedLegs.every((l) => l.expiry === parsedLegs[0]!.expiry)
+						? breakevenPrices(parsedLegs)
+						: []
+				}
 			: null
 	);
 </script>
@@ -299,10 +306,10 @@
 
 	{#if preview}
 		<div
-			class="mt-4 grid grid-cols-2 gap-3 rounded-lg p-4 sm:grid-cols-4"
+			class="mt-4 grid grid-cols-2 gap-3 rounded-lg p-4 sm:grid-cols-3 lg:grid-cols-5"
 			style="background:var(--color-surface-2)"
 		>
-			<div class="sm:col-span-4">
+			<div class="sm:col-span-3 lg:col-span-5">
 				<span class="label">Structure</span>
 				<div class="mt-0.5 text-lg font-bold" style="color:var(--color-brand)">
 					{preview.cls.label}
@@ -324,6 +331,14 @@
 				<span class="label">Max loss</span>
 				<div class="mono mt-0.5 font-semibold" style="color:var(--color-down)">
 					{preview.risk.maxLoss != null ? formatMoney(preview.risk.maxLoss) : 'Undefined'}
+				</div>
+			</div>
+			<div>
+				<span class="label">Break-even</span>
+				<div class="mono mt-0.5 font-semibold" style="color:var(--color-brand)">
+					{preview.breakevens.length
+						? preview.breakevens.map((b) => formatMoney(b)).join(' / ')
+						: '—'}
 				</div>
 			</div>
 			<div>

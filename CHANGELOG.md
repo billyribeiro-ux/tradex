@@ -106,6 +106,12 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   exhaustively unit-tested. Each leg is its own multiplier-correct option trade bound to a shared
   group; the structure page rolls up realized P&L and links each leg, and re-importing a leg's
   contract preserves the grouping. (22 unit + 5 integration + e2e tests.)
+- **Options — payoff diagram & break-evens.** Every single-expiry structure renders a P&L-at-expiry
+  curve (SVG, shaded profit/loss zones, strike ticks, break-even markers) on its page, and the
+  break-even price(s) appear both there and live on the entry-form preview. The payoff and
+  break-evens are computed purely from the legs (piecewise-linear with exact zero-crossings) and are
+  intentionally suppressed for calendars/diagonals, where an at-expiry curve would mislead.
+  (7 added unit tests.)
 
 ### Changed
 
