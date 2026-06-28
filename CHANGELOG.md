@@ -92,6 +92,20 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
   per-field column picker with a live sample preview; the confirmed mapping imports, and can be
   **saved as a template** (name + broker) and reused later via a selector. The industry's #1 import
   pain, made forgiving.
+- **Options — single-leg** (`$lib/domain/options` + `services/instruments`) — an option's identity is
+  its `(underlying, expiry, type, strike)`, so each contract maps to its own instrument (×100
+  multiplier) with a structured `option_contract` row; different strikes/expiries never net together.
+  Manual entry captures call/put + strike + expiry; OCC symbols (`AAPL240920C00190000`) are recognised
+  on CSV import and normalised to a canonical label (`AAPL 190C 20SEP24`); the trade detail shows DTE,
+  break-even and the multiplier. (8 unit + 5 integration tests.)
+- **Options — multi-leg structures** (`$lib/domain/spreads` + `services/spreads`) — log a spread as a
+  set of legs on one underlying (`/trades/spread/new`, with vertical/straddle/strangle/iron-condor
+  quick-starts and a live preview). TradeX **classifies the structure** (bull/bear call & put
+  verticals, straddles, strangles, calendars, diagonals, iron condors/butterflies, butterflies) and
+  derives its **net debit/credit and defined max profit / max loss** from the legs — purely, so it's
+  exhaustively unit-tested. Each leg is its own multiplier-correct option trade bound to a shared
+  group; the structure page rolls up realized P&L and links each leg, and re-importing a leg's
+  contract preserves the grouping. (22 unit + 5 integration + e2e tests.)
 
 ### Changed
 
@@ -102,11 +116,11 @@ A public, honest changelog is a core TradeX value — reliability is a feature.
 
 ### Deferred (next phases)
 
-- MFE/MAE + exit-efficiency (need an intrabar/tick price feed); multi-leg options grouping;
-  AI-insight persistence; saved dashboard views. (Schema is already in place for these.)
+- MFE/MAE + exit-efficiency (need an intrabar/tick price feed); AI-insight persistence; saved
+  dashboard views. (Schema is already in place for these.)
 
 - JWT/JWKS + bearer auth (added in Phase 3 for the Rust/Axum API and Tauri desktop).
-- Multi-leg options analytics; alt-exit backtest simulation.
+- Aggregate multi-leg analytics (per-strategy win rate / expectancy); alt-exit backtest simulation.
 - Per-trade candlestick chart with entry/exit markers (needs market price history).
 - Virtualized trade table (currently server-paginated), interactive CSV column-mapper UI.
 - Rust + Axum backend (Phase 3); then the Tauri shell's offline data layer via embedded DB + Neon

@@ -373,3 +373,45 @@ test('options: log a single-leg call with multiplier-correct P&L', async ({ page
 	await page.goto('/trades');
 	await expect(page.getByText(/NVDA 130C/).first()).toBeVisible();
 });
+
+test('options: log a multi-leg bull call spread with classification + defined risk', async ({
+	page
+}) => {
+	test.slow();
+	await signUp(page, uniqueEmail('spread'));
+	await page.goto('/trades/spread/new');
+	await waitForHydration(page);
+
+	await page.fill('input[name=underlying]', 'ZX9');
+	await page.fill('input[name=entryAt]', '2026-08-01T10:00');
+	await page.fill('input[name=exitAt]', '2026-08-03T15:00');
+
+	// Two legs are present by default (buy call + sell call) — fill them in.
+	await page.locator('input[name=legStrike]').nth(0).fill('250');
+	await page.locator('input[name=legExpiry]').nth(0).fill('2027-01-15');
+	await page.locator('input[name=legEntry]').nth(0).fill('5');
+	await page.locator('input[name=legExit]').nth(0).fill('8');
+	await page.locator('input[name=legStrike]').nth(1).fill('260');
+	await page.locator('input[name=legExpiry]').nth(1).fill('2027-01-15');
+	await page.locator('input[name=legEntry]').nth(1).fill('2');
+	await page.locator('input[name=legExit]').nth(1).fill('4');
+
+	// The live, client-side preview classifies the structure and derives its risk
+	// the moment the legs are complete — before anything is saved.
+	await expect(page.getByText('Bull Call Spread').first()).toBeVisible();
+	await expect(page.getByText('Net debit', { exact: true })).toBeVisible();
+	await expect(page.getByText('$700.00').first()).toBeVisible(); // max profit
+
+	await page.click('button:has-text("Save spread")');
+	await page.waitForURL(/\/trades\/group\/[0-9a-f-]{36}/, { timeout: 20000 });
+
+	// The structure page rolls up the realized P&L and shows defined risk.
+	await expect(page.getByRole('heading', { name: /Bull Call Spread/ })).toBeVisible();
+	await expect(page.getByText('+$100.00').first()).toBeVisible(); // +$300 long − $200 short
+	await expect(page.getByText('$700.00').first()).toBeVisible(); // max profit
+
+	// Each leg links back to the structure.
+	await page.getByRole('link', { name: 'Call' }).first().click();
+	await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 20000 });
+	await expect(page.getByText('Part of a structure')).toBeVisible();
+});

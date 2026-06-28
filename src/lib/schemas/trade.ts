@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ASSET_CLASSES, DIRECTIONS, OPTION_TYPES } from '$lib/domain/enums';
+import { ASSET_CLASSES, DIRECTIONS, OPTION_TYPES, SIDES } from '$lib/domain/enums';
 
 /** Validation for the manual trade-entry form. Prices/qty are decimal strings. */
 export const manualTradeSchema = z
@@ -51,3 +51,45 @@ export const manualTradeSchema = z
 	});
 
 export type ManualTradeInput = z.infer<typeof manualTradeSchema>;
+
+/** One leg of a multi-leg structure (option spread). */
+export const spreadLegSchema = z.object({
+	type: z.enum(OPTION_TYPES),
+	side: z.enum(SIDES),
+	strike: z.coerce.number().positive('Strike must be > 0'),
+	expiry: z.string().min(1, 'Expiry is required'),
+	qty: z.coerce.number().positive('Quantity must be > 0'),
+	entryPremium: z.coerce.number().nonnegative(),
+	exitPremium: z.coerce.number().nonnegative().optional()
+});
+
+/**
+ * Validation for the multi-leg structure form. A structure is opened as a unit
+ * (one entry time) and optionally closed as a unit (one exit time); each leg
+ * carries its own entry premium and, once closed, an exit premium.
+ */
+export const multiLegSchema = z
+	.object({
+		underlying: z.string().trim().min(1, 'Underlying is required').max(24),
+		entryAt: z.string().min(1, 'Entry time is required'),
+		exitAt: z.string().optional(),
+		fees: z.coerce.number().min(0).optional(),
+		confidence: z.coerce.number().int().min(1).max(10).optional(),
+		notes: z.string().max(5000).optional(),
+		setupName: z.string().max(80).optional(),
+		emotionLabel: z.string().max(80).optional(),
+		playbookId: z.string().optional(),
+		legs: z.array(spreadLegSchema).min(2, 'A structure needs at least two legs').max(6)
+	})
+	.superRefine((v, ctx) => {
+		// If any leg is closed (has an exit premium), the structure needs an exit time.
+		if (v.legs.some((l) => l.exitPremium != null) && !v.exitAt?.trim()) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['exitAt'],
+				message: 'Set an exit time for the closed structure.'
+			});
+		}
+	});
+
+export type MultiLegInputForm = z.infer<typeof multiLegSchema>;

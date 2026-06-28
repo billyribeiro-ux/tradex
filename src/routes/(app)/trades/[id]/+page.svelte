@@ -137,6 +137,18 @@
 	</div>
 {/if}
 
+{#if data.detail.group}
+	<a
+		href="/trades/group/{data.detail.group.id}"
+		class="panel mb-3 flex items-center gap-3 p-4 hover:underline"
+		use:reveal
+	>
+		<span class="panel-t">Part of a structure</span>
+		<span class="chip" style="color:var(--color-brand)">{data.detail.group.strategy}</span>
+		<span class="mono text-xs" style="color:var(--color-muted)">View the full spread →</span>
+	</a>
+{/if}
+
 {#if data.detail.option}
 	{@const oc = data.detail.option}
 	{@const dte = daysToExpiry(oc.expiry, Date.now())}

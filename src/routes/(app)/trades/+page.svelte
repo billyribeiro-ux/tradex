@@ -43,7 +43,10 @@
 		<h1 class="text-2xl font-bold">Trades</h1>
 		<p class="mono mt-0.5 text-xs" style="color:var(--color-muted)">{data.total} trades</p>
 	</div>
-	<a href="/trades/new" class="btn btn-primary">New trade</a>
+	<div class="flex gap-2">
+		<a href="/trades/spread/new" class="btn btn-ghost">New spread</a>
+		<a href="/trades/new" class="btn btn-primary">New trade</a>
+	</div>
 </header>
 
 <div class="mb-3 flex flex-wrap items-center gap-2">

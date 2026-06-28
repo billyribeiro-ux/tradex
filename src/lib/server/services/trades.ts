@@ -3,6 +3,7 @@ import type { DB } from '$lib/server/db';
 import {
 	execution,
 	instrument,
+	multiLegGroup,
 	optionContract,
 	trade,
 	tradeExecution
@@ -403,10 +404,23 @@ export async function getTradeDetail(db: DB, accountId: string, tradeId: string)
 		option = oc ?? null;
 	}
 
+	// When the trade is one leg of a structure, surface the group so the detail
+	// page can link back to the whole spread.
+	let group = null;
+	if (row.trade.multiLegGroupId) {
+		const [g] = await db
+			.select()
+			.from(multiLegGroup)
+			.where(eq(multiLegGroup.id, row.trade.multiLegGroupId))
+			.limit(1);
+		group = g ?? null;
+	}
+
 	return {
 		trade: row.trade,
 		instrument: row.instrument,
 		option,
+		group,
 		executions: fills.map((f) => f.execution),
 		categorization
 	};
