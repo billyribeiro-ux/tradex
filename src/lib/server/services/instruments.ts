@@ -1,8 +1,11 @@
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '$lib/server/db';
-import { instrument } from '$lib/server/db/schema';
+import { instrument, optionContract } from '$lib/server/db/schema';
 import { SCALE, toScaled } from '$lib/money';
+import { contractLabel, type OptionDetails } from '$lib/domain/options';
 import type { AssetClass } from '$lib/domain/enums';
+
+const OPTION_MULTIPLIER = 100 * SCALE;
 
 /** Common futures point-values so P&L is right without manual setup. */
 const FUTURES_MULTIPLIERS: Record<string, number> = {
@@ -66,4 +69,48 @@ export async function findOrCreateInstrument(
 		})
 		.returning();
 	return created!;
+}
+
+/**
+ * Resolve a single-leg option contract to the instrument that grouping/P&L runs
+ * against. Each distinct (underlying, type, strike, expiry) is its own option
+ * instrument (identity = canonical contract label, multiplier 100×) so different
+ * strikes/expiries never net against each other; the structured `optionContract`
+ * row (linked to the underlying instrument) backs display and analytics.
+ */
+export async function findOrCreateOptionContract(db: DB, d: OptionDetails) {
+	const underlying = await findOrCreateInstrument(db, {
+		symbol: d.underlying,
+		assetClass: 'stock'
+	});
+	const inst = await findOrCreateInstrument(db, {
+		symbol: contractLabel(d),
+		assetClass: 'option',
+		multiplier: OPTION_MULTIPLIER
+	});
+	const [existing] = await db
+		.select()
+		.from(optionContract)
+		.where(
+			and(
+				eq(optionContract.underlyingInstrumentId, underlying.id),
+				eq(optionContract.type, d.type),
+				eq(optionContract.strike, d.strike),
+				eq(optionContract.expiry, d.expiry)
+			)
+		)
+		.limit(1);
+	if (existing) return { instrument: inst, contract: existing };
+
+	const [contract] = await db
+		.insert(optionContract)
+		.values({
+			underlyingInstrumentId: underlying.id,
+			type: d.type,
+			strike: d.strike,
+			expiry: d.expiry,
+			multiplier: OPTION_MULTIPLIER
+		})
+		.returning();
+	return { instrument: inst, contract: contract! };
 }

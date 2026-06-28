@@ -10,6 +10,12 @@ import { toScaled } from '$lib/money';
 import { fromDatetimeLocal } from '$lib/format';
 import type { Actions, PageServerLoad } from './$types';
 
+/** A `<input type="date">` value (YYYY-MM-DD) as UTC midnight epoch ms. */
+function dateToUtcMs(d: string): number {
+	const [y, m, day] = d.split('-').map(Number);
+	return Date.UTC(y ?? 1970, (m ?? 1) - 1, day ?? 1);
+}
+
 export const load: PageServerLoad = async ({ parent, locals }) => {
 	const { accountId } = await parent();
 	const account = accountId && locals.user ? await getAccount(db, locals.user.id, accountId) : null;
@@ -55,7 +61,15 @@ export const actions: Actions = {
 			plannedTarget: v.plannedTarget != null ? toScaled(v.plannedTarget) : null,
 			confidence: v.confidence ?? null,
 			playbookId: v.playbookId || null,
-			notes: v.notes ?? null
+			notes: v.notes ?? null,
+			option:
+				v.assetClass === 'option' && v.optionType && v.optionStrike != null && v.optionExpiry
+					? {
+							type: v.optionType,
+							strike: toScaled(v.optionStrike),
+							expiry: dateToUtcMs(v.optionExpiry)
+						}
+					: undefined
 		});
 
 		// Capture setup/emotion/tags at the moment of logging (don't make the

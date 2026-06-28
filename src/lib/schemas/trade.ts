@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ASSET_CLASSES, DIRECTIONS } from '$lib/domain/enums';
+import { ASSET_CLASSES, DIRECTIONS, OPTION_TYPES } from '$lib/domain/enums';
 
 /** Validation for the manual trade-entry form. Prices/qty are decimal strings. */
 export const manualTradeSchema = z
@@ -20,7 +20,11 @@ export const manualTradeSchema = z
 		setupName: z.string().max(80).optional(),
 		emotionLabel: z.string().max(80).optional(),
 		tags: z.string().max(300).optional(),
-		playbookId: z.string().optional()
+		playbookId: z.string().optional(),
+		// Single-leg option contract details (required when assetClass is 'option').
+		optionType: z.enum(OPTION_TYPES).optional(),
+		optionStrike: z.coerce.number().positive().optional(),
+		optionExpiry: z.string().optional()
 	})
 	// Exit price and exit time describe one event: require both or neither, so a
 	// lone exitPrice isn't silently dropped (leaving the user with an open trade).
@@ -33,6 +37,16 @@ export const manualTradeSchema = z
 				path: [hasPrice ? 'exitAt' : 'exitPrice'],
 				message: 'Exit price and exit time must both be set (or both empty for an open position).'
 			});
+		}
+		// An option needs its contract identity, or different strikes/expiries
+		// would merge into one instrument.
+		if (v.assetClass === 'option') {
+			if (!v.optionType)
+				ctx.addIssue({ code: 'custom', path: ['optionType'], message: 'Choose call or put.' });
+			if (v.optionStrike == null)
+				ctx.addIssue({ code: 'custom', path: ['optionStrike'], message: 'Strike is required.' });
+			if (!v.optionExpiry || !v.optionExpiry.trim())
+				ctx.addIssue({ code: 'custom', path: ['optionExpiry'], message: 'Expiry is required.' });
 		}
 	});
 

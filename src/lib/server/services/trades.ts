@@ -1,13 +1,20 @@
 import { and, eq, ne, desc, inArray, gte, lte, sql } from 'drizzle-orm';
 import type { DB } from '$lib/server/db';
-import { execution, instrument, trade, tradeExecution } from '$lib/server/db/schema';
+import {
+	execution,
+	instrument,
+	optionContract,
+	trade,
+	tradeExecution
+} from '$lib/server/db/schema';
 import { groupExecutions } from '$lib/domain/grouping';
 import { computeRMultiple } from '$lib/domain/metrics';
 import { executionDedupeKey } from '$lib/domain/dedupe';
 import type { ExecInput } from '$lib/domain/types';
 import type { AssetClass, Direction, Side } from '$lib/domain/enums';
-import { findOrCreateInstrument } from './instruments';
+import { findOrCreateInstrument, findOrCreateOptionContract } from './instruments';
 import { getTradeCategorization } from './categorization';
+import type { OptionDetails } from '$lib/domain/options';
 
 export interface ExecutionInput {
 	side: Side;
@@ -98,6 +105,9 @@ export async function regroupInstrument(
 		executedAt: r.executedAt
 	}));
 
+	// Every execution for an option instrument references the same contract.
+	const optionContractId = rows.find((r) => r.optionContractId)?.optionContractId ?? null;
+
 	const grouped = groupExecutions(inputs, { multiplier: inst.multiplier });
 
 	const existing = await db
@@ -133,7 +143,8 @@ export async function regroupInstrument(
 			fees: g.fees,
 			holdMs: g.holdMs,
 			rMultiple: r?.rMultiple ?? null,
-			riskAmount: r?.riskAmount ?? prev?.riskAmount ?? null
+			riskAmount: r?.riskAmount ?? prev?.riskAmount ?? null,
+			optionContractId
 		};
 
 		let tradeId: string;
@@ -185,12 +196,28 @@ export async function addManualTrade(
 		plannedStop?: number | null;
 		plannedTarget?: number | null;
 		notes?: string | null;
+		/** present for single-leg options: the contract details (underlying = symbol) */
+		option?: Omit<OptionDetails, 'underlying'>;
 	}
 ): Promise<string> {
-	const inst = await findOrCreateInstrument(db, {
-		symbol: input.symbol,
-		assetClass: input.assetClass
-	});
+	// Options resolve to a per-contract instrument (100× multiplier) and record
+	// the structured contract; everything else is a plain instrument.
+	let instrumentId: string;
+	let optionContractId: string | null = null;
+	if (input.assetClass === 'option' && input.option) {
+		const { instrument: oi, contract } = await findOrCreateOptionContract(db, {
+			underlying: input.symbol,
+			...input.option
+		});
+		instrumentId = oi.id;
+		optionContractId = contract.id;
+	} else {
+		const inst = await findOrCreateInstrument(db, {
+			symbol: input.symbol,
+			assetClass: input.assetClass
+		});
+		instrumentId = inst.id;
+	}
 	const entrySide: Side = input.direction === 'long' ? 'buy' : 'sell';
 	const exitSide: Side = input.direction === 'long' ? 'sell' : 'buy';
 	const halfFee = Math.round((input.fees ?? 0) / 2);
@@ -201,7 +228,8 @@ export async function addManualTrade(
 			qty: input.qty,
 			price: input.entryPrice,
 			fee: halfFee,
-			executedAt: input.entryAt
+			executedAt: input.entryAt,
+			optionContractId
 		}
 	];
 	if (input.exitPrice != null && input.exitAt != null) {
@@ -210,11 +238,12 @@ export async function addManualTrade(
 			qty: input.qty,
 			price: input.exitPrice,
 			fee: (input.fees ?? 0) - halfFee,
-			executedAt: input.exitAt
+			executedAt: input.exitAt,
+			optionContractId
 		});
 	}
 
-	await recordExecutions(db, input.accountId, inst.id, execs);
+	await recordExecutions(db, input.accountId, instrumentId, execs);
 
 	const [created] = await db
 		.select()
@@ -222,7 +251,7 @@ export async function addManualTrade(
 		.where(
 			and(
 				eq(trade.accountId, input.accountId),
-				eq(trade.instrumentId, inst.id),
+				eq(trade.instrumentId, instrumentId),
 				eq(trade.openedAt, input.entryAt),
 				eq(trade.direction, input.direction)
 			)
@@ -364,9 +393,20 @@ export async function getTradeDetail(db: DB, accountId: string, tradeId: string)
 
 	const categorization = await getTradeCategorization(db, tradeId);
 
+	let option = null;
+	if (row.trade.optionContractId) {
+		const [oc] = await db
+			.select()
+			.from(optionContract)
+			.where(eq(optionContract.id, row.trade.optionContractId))
+			.limit(1);
+		option = oc ?? null;
+	}
+
 	return {
 		trade: row.trade,
 		instrument: row.instrument,
+		option,
 		executions: fills.map((f) => f.execution),
 		categorization
 	};

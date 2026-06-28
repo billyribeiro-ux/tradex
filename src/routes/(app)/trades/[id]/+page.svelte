@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatMoney, formatRatio, fromScaled } from '$lib/money';
-	import { formatDateTime, formatDuration } from '$lib/format';
+	import { formatDate, formatDateTime, formatDuration } from '$lib/format';
+	import { breakeven, daysToExpiry } from '$lib/domain/options';
 	import TradePath from '$lib/components/TradePath.svelte';
 	import { reveal } from '$lib/motion';
 	import { page } from '$app/state';
@@ -133,6 +134,26 @@
 				</div>
 			{/each}
 		</div>
+	</div>
+{/if}
+
+{#if data.detail.option}
+	{@const oc = data.detail.option}
+	{@const dte = daysToExpiry(oc.expiry, Date.now())}
+	<div class="panel mb-3 flex flex-wrap items-center gap-x-6 gap-y-2 p-4" use:reveal>
+		<span class="panel-t">Option contract</span>
+		<span class="chip capitalize" style="color:var(--color-brand)">{oc.type}</span>
+		<span class="mono text-sm">Strike {formatMoney(oc.strike, cur)}</span>
+		<span class="mono text-sm">Exp {formatDate(oc.expiry)}</span>
+		<span class="chip" style={dte < 0 ? 'color:var(--color-down)' : ''}>
+			{dte < 0 ? `expired ${-dte}d ago` : `${dte} DTE`}
+		</span>
+		<span class="mono text-sm">
+			Breakeven {formatMoney(breakeven(oc.type, oc.strike, t.avgEntry), cur)}
+		</span>
+		<span class="mono text-xs" style="color:var(--color-faint)"
+			>×{fromScaled(oc.multiplier)} multiplier</span
+		>
 	</div>
 {/if}
 

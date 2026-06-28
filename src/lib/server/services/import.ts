@@ -2,8 +2,9 @@ import Papa from 'papaparse';
 import type { DB } from '$lib/server/db';
 import { importBatch } from '$lib/server/db/schema';
 import { detectColumns, mapRow, type ColumnMap } from '$lib/domain/csv-mapping';
+import { parseOccSymbol, contractLabel, type OptionDetails } from '$lib/domain/options';
 import type { AssetClass } from '$lib/domain/enums';
-import { findOrCreateInstrument } from './instruments';
+import { findOrCreateInstrument, findOrCreateOptionContract } from './instruments';
 import { recordExecutions, type ExecutionInput } from './trades';
 
 /** Guardrails: Papa.parse loads the whole file into memory, so cap input size
@@ -93,10 +94,12 @@ export async function importCsv(
 	const mapping = opts.mapping ?? detectColumns(headers);
 	const fallbackClass: AssetClass = opts.defaultAssetClass ?? 'stock';
 
-	// group valid executions by instrument so we regroup each once
+	// group valid executions by instrument so we regroup each once. An OCC-style
+	// symbol (e.g. "AAPL240920C00190000") is recognised as an option and keyed by
+	// its canonical contract so different strikes/expiries stay separate.
 	const byInstrument = new Map<
 		string,
-		{ symbol: string; assetClass: AssetClass; execs: ExecutionInput[] }
+		{ symbol: string; assetClass: AssetClass; option?: OptionDetails; execs: ExecutionInput[] }
 	>();
 	const errors: RowError[] = [];
 
@@ -111,9 +114,16 @@ export async function importCsv(
 			return;
 		}
 		const v = mapped.value;
-		const assetClass = v.assetClass ?? fallbackClass;
-		const key = `${v.symbol}:${assetClass}`;
-		const bucket = byInstrument.get(key) ?? { symbol: v.symbol, assetClass, execs: [] };
+		const occ = parseOccSymbol(v.symbol);
+		const assetClass: AssetClass = occ ? 'option' : (v.assetClass ?? fallbackClass);
+		const symbol = occ ? contractLabel(occ) : v.symbol;
+		const key = `${symbol}:${assetClass}`;
+		const bucket = byInstrument.get(key) ?? {
+			symbol,
+			assetClass,
+			option: occ ?? undefined,
+			execs: []
+		};
 		bucket.execs.push({
 			side: v.side,
 			qty: v.qty,
@@ -129,11 +139,20 @@ export async function importCsv(
 	let importedCount = 0;
 	let duplicateCount = 0;
 	for (const bucket of byInstrument.values()) {
-		const inst = await findOrCreateInstrument(db, {
-			symbol: bucket.symbol,
-			assetClass: bucket.assetClass
-		});
-		const res = await recordExecutions(db, opts.accountId, inst.id, bucket.execs);
+		let instrumentId: string;
+		let execs = bucket.execs;
+		if (bucket.option) {
+			const { instrument: oi, contract } = await findOrCreateOptionContract(db, bucket.option);
+			instrumentId = oi.id;
+			execs = bucket.execs.map((e) => ({ ...e, optionContractId: contract.id }));
+		} else {
+			const inst = await findOrCreateInstrument(db, {
+				symbol: bucket.symbol,
+				assetClass: bucket.assetClass
+			});
+			instrumentId = inst.id;
+		}
+		const res = await recordExecutions(db, opts.accountId, instrumentId, execs);
 		importedCount += res.inserted;
 		duplicateCount += res.duplicates;
 	}

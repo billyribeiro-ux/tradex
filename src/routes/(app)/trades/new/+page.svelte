@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 	import { ASSET_CLASS_LABELS } from '$lib/domain/enums';
 
 	let { data, form } = $props();
@@ -8,6 +9,11 @@
 	const values = $derived((form?.values ?? {}) as Record<string, string>);
 	const err = (field: string): string | undefined => errors[field]?.[0];
 	const val = (field: string, fallback = '') => values[field] ?? fallback;
+
+	// Selected asset class drives the option-contract fields (call/put, strike,
+	// expiry) which an option needs as its identity.
+	let assetClass = $state(untrack(() => data.assetClasses[0] ?? 'stock'));
+	const isOption = $derived(assetClass === 'option');
 </script>
 
 <svelte:head><title>New trade · TradeX</title></svelte:head>
@@ -37,7 +43,7 @@
 		</div>
 		<div>
 			<label class="label" for="assetClass">Asset class</label>
-			<select id="assetClass" name="assetClass" class="input mt-1">
+			<select id="assetClass" name="assetClass" class="input mt-1" bind:value={assetClass}>
 				{#each data.assetClasses as ac (ac)}
 					<option value={ac}>{ASSET_CLASS_LABELS[ac]}</option>
 				{/each}
@@ -64,6 +70,61 @@
 			{#if err('qty')}<p class="mt-1 text-xs" style="color:var(--color-down)">{err('qty')}</p>{/if}
 		</div>
 	</div>
+
+	{#if isOption}
+		<div
+			class="mt-4 grid grid-cols-2 gap-4 rounded-lg p-3 sm:grid-cols-3"
+			style="background:var(--color-surface-2)"
+		>
+			<p class="text-xs sm:col-span-3" style="color:var(--color-muted)">
+				Symbol is the <strong>underlying</strong>; price is the premium per contract (P&L applies
+				the ×100 contract multiplier automatically).
+			</p>
+			<div>
+				<label class="label" for="optionType">Type</label>
+				<select
+					id="optionType"
+					name="optionType"
+					class="input mt-1"
+					value={val('optionType', 'call')}
+				>
+					<option value="call">Call</option>
+					<option value="put">Put</option>
+				</select>
+				{#if err('optionType')}<p class="mt-1 text-xs" style="color:var(--color-down)">
+						{err('optionType')}
+					</p>{/if}
+			</div>
+			<div>
+				<label class="label" for="optionStrike">Strike</label>
+				<input
+					id="optionStrike"
+					name="optionStrike"
+					class="input mt-1"
+					type="text"
+					inputmode="decimal"
+					value={val('optionStrike')}
+					placeholder="190"
+				/>
+				{#if err('optionStrike')}<p class="mt-1 text-xs" style="color:var(--color-down)">
+						{err('optionStrike')}
+					</p>{/if}
+			</div>
+			<div>
+				<label class="label" for="optionExpiry">Expiry</label>
+				<input
+					id="optionExpiry"
+					name="optionExpiry"
+					class="input mt-1"
+					type="date"
+					value={val('optionExpiry')}
+				/>
+				{#if err('optionExpiry')}<p class="mt-1 text-xs" style="color:var(--color-down)">
+						{err('optionExpiry')}
+					</p>{/if}
+			</div>
+		</div>
+	{/if}
 
 	<div class="mt-4 grid grid-cols-2 gap-4">
 		<div>

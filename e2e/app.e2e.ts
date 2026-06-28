@@ -342,3 +342,34 @@ test('import: preview → map columns → import → save & reuse a template', a
 	await page.goto('/import');
 	await expect(page.getByText('My IB')).toBeVisible();
 });
+
+test('options: log a single-leg call with multiplier-correct P&L', async ({ page }) => {
+	test.slow();
+	await signUp(page, uniqueEmail('opt'));
+	await page.goto('/trades/new');
+	await waitForHydration(page);
+
+	await page.fill('input[name=symbol]', 'NVDA');
+	await page.selectOption('select[name=assetClass]', 'option');
+	// the option-contract fields appear only for options
+	await expect(page.locator('select[name=optionType]')).toBeVisible();
+	await page.selectOption('select[name=optionType]', 'call');
+	await page.fill('input[name=optionStrike]', '130');
+	await page.fill('input[name=optionExpiry]', '2026-09-18');
+	await page.selectOption('select[name=direction]', 'long');
+	await page.fill('input[name=qty]', '2');
+	await page.fill('input[name=entryPrice]', '5');
+	await page.fill('input[name=entryAt]', '2026-06-12T14:30');
+	await page.fill('input[name=exitPrice]', '7');
+	await page.fill('input[name=exitAt]', '2026-06-12T15:30');
+	await page.click('button[type=submit]');
+	await page.waitForURL(/\/trades\/[0-9a-f-]{36}/, { timeout: 20000 });
+
+	// the detail surfaces the contract and the 100×-correct P&L (2 × $2 × 100 = $400)
+	await expect(page.getByText('Option contract')).toBeVisible();
+	await expect(page.getByText('$400', { exact: false }).first()).toBeVisible();
+
+	// the trade log identifies the contract, not just "NVDA"
+	await page.goto('/trades');
+	await expect(page.getByText(/NVDA 130C/).first()).toBeVisible();
+});
