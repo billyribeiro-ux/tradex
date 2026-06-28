@@ -386,15 +386,21 @@ test('options: log a multi-leg bull call spread with classification + defined ri
 	await page.fill('input[name=entryAt]', '2026-08-01T10:00');
 	await page.fill('input[name=exitAt]', '2026-08-03T15:00');
 
-	// Two legs are present by default (buy call + sell call) — fill them in.
-	await page.locator('input[name=legStrike]').nth(0).fill('250');
-	await page.locator('input[name=legExpiry]').nth(0).fill('2027-01-15');
-	await page.locator('input[name=legEntry]').nth(0).fill('5');
-	await page.locator('input[name=legExit]').nth(0).fill('8');
-	await page.locator('input[name=legStrike]').nth(1).fill('260');
-	await page.locator('input[name=legExpiry]').nth(1).fill('2027-01-15');
-	await page.locator('input[name=legEntry]').nth(1).fill('2');
-	await page.locator('input[name=legExit]').nth(1).fill('4');
+	// Two legs are present by default. Drive side/type via the Buy/Sell + Call/Put
+	// toggle boxes (proving they update the submitted values), then fill the rest.
+	const rows = page.locator('table tbody tr');
+	await rows.nth(0).getByRole('button', { name: 'Buy', exact: true }).click();
+	await rows.nth(0).getByRole('button', { name: 'Call', exact: true }).click();
+	await rows.nth(0).locator('input[name=legStrike]').fill('250');
+	await rows.nth(0).locator('input[name=legExpiry]').fill('2027-01-15');
+	await rows.nth(0).locator('input[name=legEntry]').fill('5');
+	await rows.nth(0).locator('input[name=legExit]').fill('8');
+	await rows.nth(1).getByRole('button', { name: 'Sell', exact: true }).click();
+	await rows.nth(1).getByRole('button', { name: 'Call', exact: true }).click();
+	await rows.nth(1).locator('input[name=legStrike]').fill('260');
+	await rows.nth(1).locator('input[name=legExpiry]').fill('2027-01-15');
+	await rows.nth(1).locator('input[name=legEntry]').fill('2');
+	await rows.nth(1).locator('input[name=legExit]').fill('4');
 
 	// The live, client-side preview classifies the structure and derives its risk
 	// the moment the legs are complete — before anything is saved.

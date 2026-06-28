@@ -167,16 +167,60 @@
 				{#each legs as leg, i (i)}
 					<tr>
 						<td>
-							<select name="legSide" class="input py-1" bind:value={leg.side} aria-label="Side">
-								<option value="buy">Buy</option>
-								<option value="sell">Sell</option>
-							</select>
+							<div
+								class="inline-flex overflow-hidden rounded-md border"
+								style="border-color:var(--color-hairline)"
+								role="group"
+								aria-label="Side"
+							>
+								<button
+									type="button"
+									class="px-3 py-1 text-xs font-semibold"
+									style={leg.side === 'buy'
+										? 'background:var(--color-up);color:#04110b'
+										: 'color:var(--color-muted)'}
+									aria-pressed={leg.side === 'buy'}
+									onclick={() => (leg.side = 'buy')}>Buy</button
+								>
+								<button
+									type="button"
+									class="border-l px-3 py-1 text-xs font-semibold"
+									style="border-color:var(--color-hairline);{leg.side === 'sell'
+										? 'background:var(--color-down);color:#fff'
+										: 'color:var(--color-muted)'}"
+									aria-pressed={leg.side === 'sell'}
+									onclick={() => (leg.side = 'sell')}>Sell</button
+								>
+							</div>
+							<input type="hidden" name="legSide" value={leg.side} />
 						</td>
 						<td>
-							<select name="legType" class="input py-1" bind:value={leg.type} aria-label="Type">
-								<option value="call">Call</option>
-								<option value="put">Put</option>
-							</select>
+							<div
+								class="inline-flex overflow-hidden rounded-md border"
+								style="border-color:var(--color-hairline)"
+								role="group"
+								aria-label="Type"
+							>
+								<button
+									type="button"
+									class="px-3 py-1 text-xs font-semibold"
+									style={leg.type === 'call'
+										? 'background:var(--color-brand);color:#04110b'
+										: 'color:var(--color-muted)'}
+									aria-pressed={leg.type === 'call'}
+									onclick={() => (leg.type = 'call')}>Call</button
+								>
+								<button
+									type="button"
+									class="border-l px-3 py-1 text-xs font-semibold"
+									style="border-color:var(--color-hairline);{leg.type === 'put'
+										? 'background:var(--color-brand);color:#04110b'
+										: 'color:var(--color-muted)'}"
+									aria-pressed={leg.type === 'put'}
+									onclick={() => (leg.type = 'put')}>Put</button
+								>
+							</div>
+							<input type="hidden" name="legType" value={leg.type} />
 						</td>
 						<td>
 							<input
